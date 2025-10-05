@@ -26,13 +26,15 @@ class WebbUIRadioButton<T> extends StatelessWidget {
           groupValue: groupValue,
           onChanged: onChanged,
           fillColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected))
+            if (states.contains(WidgetState.selected)) {
               return webbTheme.colorPalette.primary;
+            }
             return webbTheme.colorPalette.neutralDark;
           }),
           overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.pressed))
+            if (states.contains(WidgetState.pressed)) {
               return webbTheme.interactionStates.pressedOverlay;
+            }
             return null;
           }),
           focusColor: webbTheme.interactionStates.focusedBorder,
