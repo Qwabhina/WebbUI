@@ -61,7 +61,7 @@ class _WebbUIPasswordFieldState extends State<WebbUIPasswordField> {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: borderColor!),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -70,7 +70,7 @@ class _WebbUIPasswordFieldState extends State<WebbUIPasswordField> {
         ),
         contentPadding: EdgeInsets.symmetric(
             horizontal: webbTheme.spacingGrid.spacing(2),
-            vertical: webbTheme.spacingGrid.spacing(1.5)),
+            vertical: webbTheme.spacingGrid.spacing(1)),
       ),
       style: webbTheme.typography.bodyMedium
           .copyWith(color: webbTheme.colorPalette.neutralDark),
