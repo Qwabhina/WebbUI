@@ -32,20 +32,34 @@ class WebbUIIconTheme extends ThemeExtension<WebbUIIconTheme> {
     iconThemeData: IconThemeData(color: Colors.white, size: 24.0),
   );
 
-  /// Responsive size getter.
-  static double getIconSize(BuildContext context, {required String sizeType}) {
-    final WebbUIIconTheme theme =
-        Theme.of(context).extension<WebbUIIconTheme>() ?? defaultIconTheme;
-    final double scale =
-        WebbUITypography.getScaleFactor(context); // Reuse scale from typography
-    switch (sizeType) {
-      case 'small':
-        return theme.smallSize * scale;
-      case 'large':
-        return theme.largeSize * scale;
-      default:
-        return theme.mediumSize * scale;
-    }
+  // /// Responsive size getter.
+  // static double getIconSize(BuildContext context, {required String sizeType}) {
+  //   final WebbUIIconTheme theme =
+  //       Theme.of(context).extension<WebbUIIconTheme>() ?? defaultIconTheme;
+  //   final double scale =
+  //       WebbUITypography.getScaleFactor(context); // Reuse scale from typography
+  //   switch (sizeType) {
+  //     case 'small':
+  //       return theme.smallSize * scale;
+  //     case 'large':
+  //       return theme.largeSize * scale;
+  //     default:
+  //       return theme.mediumSize * scale;
+  //   }
+  // }
+
+  WebbUIIconTheme scaleWithContext(BuildContext context) {
+    final double scaleFactor = WebbUITypography.getScaleFactor(context);
+    return copyWith(
+      smallSize: smallSize * scaleFactor,
+      mediumSize: mediumSize * scaleFactor,
+      largeSize: largeSize * scaleFactor,
+      // Optionally scale iconThemeData.size if needed, but often size is explicit
+      // If you want to scale the default size as well:
+      iconThemeData: iconThemeData.copyWith(
+        size: iconThemeData.size! * scaleFactor,
+      ),
+    );
   }
 
   @override

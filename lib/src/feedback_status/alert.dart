@@ -48,7 +48,7 @@ class WebbUIAlert extends StatelessWidget {
         children: [
           Icon(icon,
               color: Colors.white,
-              size: WebbUIIconTheme.getIconSize(context, sizeType: 'medium')),
+              size: context.iconTheme.mediumSize),
           SizedBox(width: webbTheme.spacingGrid.spacing(2)),
           Expanded(
             child: Text(

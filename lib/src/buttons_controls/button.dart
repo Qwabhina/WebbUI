@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:webb_ui/src/foundations/foundations.dart';
 import 'package:webb_ui/src/theme.dart';
 
 enum WebbUIButtonVariant { primary, secondary, tertiary }
@@ -57,35 +56,85 @@ class WebbUIButton extends StatelessWidget {
     }
 
     if (disabled) {
+      // Disabled button always uses interactionStates.disabledColor
       backgroundColor = webbTheme.interactionStates.disabledColor;
       foregroundColor = Colors.white.withOpacity(0.5);
     }
+
+    final scaledIconTheme = webbTheme.iconTheme;
+
+    // --- START OF STYLE FIX: Use a full ButtonStyle to handle WidgetStateProperty ---
+    final ButtonStyle style = ButtonStyle(
+      // Background Color
+      backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            // Use the pre-calculated disabled color
+            return webbTheme.interactionStates.disabledColor;
+          }
+          return backgroundColor; // Use the variant-specific color
+        },
+      ),
+
+      // Foreground Color (Text/Icon)
+      foregroundColor: WidgetStateProperty.all<Color?>(foregroundColor),
+
+      // Overlay Color (This is the fix for hover/pressed)
+      overlayColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.pressed)) {
+            return webbTheme.interactionStates.pressedOverlay;
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return webbTheme.interactionStates.hoverOverlay;
+          }
+          return null; // Transparent overlay by default
+        },
+      ),
+
+      // Padding
+      padding: WidgetStateProperty.all<EdgeInsetsGeometry>(
+        EdgeInsets.symmetric(
+            horizontal: paddingHorizontal,
+            vertical: webbTheme.spacingGrid.spacing(1)),
+      ),
+
+      // Shape/Border
+      shape: WidgetStateProperty.all<OutlinedBorder>(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: borderSide ?? BorderSide.none,
+        ),
+      ),
+
+      // Elevation (use the elevation token)
+      elevation: WidgetStateProperty.resolveWith<double?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return 0;
+          }
+          // Using the blurRadius as a simple elevation proxy
+          return webbTheme.elevation.getShadows(1).first.blurRadius;
+        },
+      ),
+
+      // Minimum size to enforce minHeight (accessibility touch target)
+      minimumSize: WidgetStateProperty.all<Size>(Size(0, minHeight)),
+    );
+    // --- END OF STYLE FIX ---
+
 
     return SizedBox(
       width: fullWidth ? double.infinity : null,
       height: minHeight,
       child: ElevatedButton(
         onPressed: disabled || isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          foregroundColor: foregroundColor,
-          side: borderSide,
-          padding: EdgeInsets.symmetric(
-              horizontal: paddingHorizontal,
-              vertical: webbTheme.spacingGrid.spacing(1)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          elevation: webbTheme.elevation
-              .getShadows(1)
-              .first
-              .blurRadius, // Subtle shadow
-          disabledBackgroundColor: webbTheme.interactionStates.disabledColor,
-          overlayColor:
-              webbTheme.interactionStates.hoverOverlay, // For hover/pressed
-        ),
+        // Pass the resolved ButtonStyle object here
+        style: style, 
         child: isLoading
             ? SizedBox(
-                width: 20,
-                height: 20,
+                width: scaledIconTheme.mediumSize, // Use scaled size for loader
+                height: scaledIconTheme.mediumSize,
                 child: CircularProgressIndicator(
                   color: foregroundColor,
                   strokeWidth: 2,
@@ -95,9 +144,7 @@ class WebbUIButton extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon,
-                        size: WebbUIIconTheme.getIconSize(context,
-                            sizeType: 'medium')),
+                    Icon(icon, size: scaledIconTheme.mediumSize),
                     SizedBox(width: webbTheme.spacingGrid.spacing(1)),
                   ],
                   Text(

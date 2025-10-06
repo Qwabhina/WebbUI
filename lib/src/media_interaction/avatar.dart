@@ -19,9 +19,8 @@ class WebbUIAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final webbTheme = context;
     final bool isMobile = MediaQuery.of(context).size.width < 600;
-    final double avatarSize = size ??
-        WebbUIIconTheme.getIconSize(context,
-            sizeType: isMobile ? 'medium' : 'large');
+    final double avatarSize =
+        isMobile ? context.iconTheme.mediumSize : context.iconTheme.largeSize;
 
     Widget avatarContent;
     if (imageUrl != null) {

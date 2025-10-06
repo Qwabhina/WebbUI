@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:bitsdojo_window/bitsdojo_window.dart'; // For desktop title bar integration if needed
-import 'package:webb_ui/src/foundations/foundations.dart';
 import 'package:webb_ui/src/theme.dart';
 
 class WebbUISideNavItem {
@@ -137,8 +135,7 @@ class _WebbUISideNavState extends State<WebbUISideNav>
                     color: selected
                         ? Colors.white
                         : webbTheme.colorPalette.neutralDark,
-                    size: WebbUIIconTheme.getIconSize(context,
-                        sizeType: 'medium'),
+                    size: context.iconTheme.mediumSize,
                   ),
                   if (expanded) ...[
                     SizedBox(width: webbTheme.spacingGrid.spacing(2)),

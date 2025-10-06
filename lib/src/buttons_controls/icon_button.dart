@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:webb_ui/src/foundations/foundations.dart';
 import 'package:webb_ui/src/theme.dart';
 
 class WebbUIIconButton extends StatelessWidget {
@@ -19,8 +18,7 @@ class WebbUIIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final webbTheme = context;
-    final double size =
-        WebbUIIconTheme.getIconSize(context, sizeType: 'medium');
+    final double size = context.iconTheme.mediumSize;
     final Color color = disabled
         ? webbTheme.interactionStates.disabledColor
         : webbTheme.colorPalette.primary;

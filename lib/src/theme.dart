@@ -7,19 +7,34 @@ extension WebbUITheme on BuildContext {
       Theme.of(this).extension<WebbUIColorPalette>() ??
       WebbUIColorPalette.defaultPalette;
 
+  // WebbUITypography get typography {
+  //   final base = Theme.of(this).extension<WebbUITypography>() ??
+  //       WebbUITypography.defaultTypography;
+  //   return base.scaleWithContext(this); // Applies responsive scaling
+  // }
+
+  WebbUITypography get typographyBase =>
+      Theme.of(this).extension<WebbUITypography>() ??
+      WebbUITypography.defaultTypography;
+
   WebbUITypography get typography {
-    final base = Theme.of(this).extension<WebbUITypography>() ??
-        WebbUITypography.defaultTypography;
-    return base.scaleWithContext(this); // Applies responsive scaling
+    return typographyBase.scaleWithContext(this); // Now uses the base getter
   }
 
   WebbUISpacingGrid get spacingGrid =>
       Theme.of(this).extension<WebbUISpacingGrid>() ??
       WebbUISpacingGrid.defaultSpacingGrid;
 
-  WebbUIIconTheme get iconTheme =>
-      Theme.of(this).extension<WebbUIIconTheme>() ??
-      WebbUIIconTheme.defaultIconTheme;
+  // WebbUIIconTheme get iconTheme =>
+  //     Theme.of(this).extension<WebbUIIconTheme>() ??
+  //     WebbUIIconTheme.defaultIconTheme;
+
+  WebbUIIconTheme get iconTheme {
+    final base = Theme.of(this).extension<WebbUIIconTheme>() ??
+        WebbUIIconTheme.defaultIconTheme;
+    return base.scaleWithContext(this); // Applies responsive scaling
+  }
+
 
   WebbUIElevation get elevation =>
       Theme.of(this).extension<WebbUIElevation>() ??
