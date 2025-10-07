@@ -1,6 +1,4 @@
-export 'text_field.dart' show WebbUITextField;
-export 'datepicker.dart' show WebbUIDatePicker;
-export 'timepicker.dart' show WebbUITimePicker;
+export 'text_input/text_input.dart';
+export 'date_time_picker/date_time_picker.dart';
 export 'number_stepper.dart' show WebbUINumberStepper;
-export 'password_field.dart' show WebbUIPasswordField;
 export 'file_upload.dart' show WebbUIFileUpload;
