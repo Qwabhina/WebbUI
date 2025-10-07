@@ -196,9 +196,7 @@ class _WebbUIStepperState extends State<WebbUIStepper>
                     : Matrix4.identity(),
                 child: Column(
                   children: [
-                    // --- FIX APPLIED HERE: Use scaled icon size ---
                     Icon(icon, color: color, size: iconSize),
-                    // --- END FIX ---
                     Text(widget.stepTitles[index],
                         style: webbTheme.typography.labelMedium),
                   ],
