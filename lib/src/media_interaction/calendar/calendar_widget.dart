@@ -28,7 +28,7 @@ class CalendarWidget extends StatefulWidget {
 class _CalendarWidgetState extends State<CalendarWidget> {
   late DateTime _focusedDate;
   late CalendarView _currentView;
-  late DateTime _selectedDate; // Used primarily by MonthView to feed AgendaView
+  late DateTime selectedDate; // Used primarily by MonthView to feed AgendaView
 
   // Mock Events for demonstration (replace with widget.events in production)
   final List<Event> _mockEvents = [
@@ -69,7 +69,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     super.initState();
     _focusedDate = CalendarUtils.normalizeDate(DateTime.now());
     _currentView = widget.initialView;
-    _selectedDate = _focusedDate;
+    selectedDate = _focusedDate;
   }
 
   /// Handles navigation between months, weeks, or days.
@@ -90,7 +90,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
         case CalendarView.timelineDay:
         case CalendarView.schedule:
           _focusedDate = _focusedDate.add(Duration(days: delta));
-          _selectedDate =
+          selectedDate =
               _focusedDate; // Update selected date for Day/Schedule views
           break;
       }
@@ -100,7 +100,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
   /// Handles selecting a specific date (used by MonthView for Agenda/Day switch).
   void _handleDateSelected(DateTime date) {
     setState(() {
-      _selectedDate = date;
+      selectedDate = date;
       // When a date is selected in Month View, switch to Day View or Agenda View
       if (_currentView == CalendarView.month) {
         _currentView = CalendarView.day; // Switch to Day view upon selection
@@ -228,7 +228,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
           TextButton(
             onPressed: () => setState(() {
               _focusedDate = CalendarUtils.normalizeDate(DateTime.now());
-              _selectedDate = _focusedDate;
+              selectedDate = _focusedDate;
             }),
             style: TextButton.styleFrom(
               foregroundColor: primaryColor,
