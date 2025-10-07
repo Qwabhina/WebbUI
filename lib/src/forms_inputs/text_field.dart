@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webb_ui/webb_ui.dart';
 
-enum WebbUIValidationState { none, success, error }
 
 class WebbUITextField extends StatelessWidget {
   final TextEditingController? controller;
