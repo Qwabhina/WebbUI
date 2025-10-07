@@ -37,7 +37,7 @@ class WebbUISpacingGrid extends ThemeExtension<WebbUISpacingGrid> {
   }
 
   /// Helper for responsive spacing: multiples of baseSpacing.
-  double spacing(int multiplier) => baseSpacing * multiplier;
+  double spacing(num multiplier) => baseSpacing * multiplier;
 
   @override
   WebbUISpacingGrid copyWith({
