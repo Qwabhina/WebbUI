@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:webb_ui/webb_ui.dart';
+import 'package:webb_ui/src/theme.dart';
 
 enum WebbUIStatusType { online, offline, pending, custom }
 

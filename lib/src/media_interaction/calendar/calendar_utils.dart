@@ -1,5 +1,3 @@
-// Note: This file must be imported where it's used.
-
 import 'calendar_definitions.dart';
 
 /// Helper class for common calendar date calculations.
@@ -33,7 +31,7 @@ class CalendarUtils {
         .toList();
   }
 
-  // --- CUSTOM DATE FORMATTING FUNCTIONS (Replacing 'intl' package) ---
+  // --- CUSTOM DATE FORMATTING FUNCTIONS ---
 
   /// Formats date to display month and year (e.g., "October 2025").
   static String formatDateMonthYear(DateTime date) {

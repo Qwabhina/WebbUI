@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dropzone/flutter_dropzone.dart';
-import 'package:webb_ui/webb_ui.dart';
+import 'package:webb_ui/src/theme.dart';
 
 class WebbUIFileUpload extends StatefulWidget {
   final ValueChanged<PlatformFile>? onFileSelected;

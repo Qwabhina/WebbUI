@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
-import 'calendar_month_view.dart';
-import 'calendar_week_view.dart';
-import 'calendar_schedule_view.dart';
-import 'calendar_timeline_view.dart';
-import 'calendar_agenda_view.dart';
+import 'calendar_month_view.dart' show CalendarMonthView;
+import 'calendar_week_view.dart' show CalendarWeekView;
+import 'calendar_schedule_view.dart' show CalendarScheduleView;
+import 'calendar_timeline_view.dart' show CalendarTimelineView;
+import 'calendar_agenda_view.dart' show CalendarAgendaView;
 import 'calendar_definitions.dart';
 import 'calendar_utils.dart';
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:webb_ui/webb_ui.dart';
+import 'package:webb_ui/src/theme.dart';
 
 class WebbUIResponsiveText extends StatelessWidget {
   final String data;
