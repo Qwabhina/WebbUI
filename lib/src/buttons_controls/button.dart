@@ -63,7 +63,6 @@ class WebbUIButton extends StatelessWidget {
 
     final scaledIconTheme = webbTheme.iconTheme;
 
-    // --- START OF STYLE FIX: Use a full ButtonStyle to handle WidgetStateProperty ---
     final ButtonStyle style = ButtonStyle(
       // Background Color
       backgroundColor: WidgetStateProperty.resolveWith<Color?>(
@@ -121,7 +120,6 @@ class WebbUIButton extends StatelessWidget {
       // Minimum size to enforce minHeight (accessibility touch target)
       minimumSize: WidgetStateProperty.all<Size>(Size(0, minHeight)),
     );
-    // --- END OF STYLE FIX ---
 
 
     return SizedBox(
