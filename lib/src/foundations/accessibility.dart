@@ -5,16 +5,23 @@ import 'dart:ui' show lerpDouble;
 class WebbUIAccessibility extends ThemeExtension<WebbUIAccessibility> {
   final double minContrastRatio; // WCAG AA: 4.5:1
   final double minTouchTargetSize; // 48x48 dp for mobile
+  final double minTextSizeLarge; // 18pt for large text (WCAG)
+  final double minTextSizeSmall; // 14pt for normal text
 
   const WebbUIAccessibility({
     required this.minContrastRatio,
     required this.minTouchTargetSize,
+    required this.minTextSizeLarge,
+    required this.minTextSizeSmall,
   });
+
 
   /// Default guidelines.
   static const WebbUIAccessibility defaultAccessibility = WebbUIAccessibility(
     minContrastRatio: 4.5,
     minTouchTargetSize: 48.0,
+    minTextSizeLarge: 18.0,
+    minTextSizeSmall: 14.0,
   );
 
   /// Helper to check contrast (using luminance).
@@ -31,16 +38,22 @@ class WebbUIAccessibility extends ThemeExtension<WebbUIAccessibility> {
   WebbUIAccessibility copyWith({
     double? minContrastRatio,
     double? minTouchTargetSize,
+    double? minTextSizeLarge,
+    double? minTextSizeSmall,
   }) {
     return WebbUIAccessibility(
       minContrastRatio: minContrastRatio ?? this.minContrastRatio,
       minTouchTargetSize: minTouchTargetSize ?? this.minTouchTargetSize,
+      minTextSizeLarge: minTextSizeLarge ?? this.minTextSizeLarge,
+      minTextSizeSmall: minTextSizeSmall ?? this.minTextSizeSmall,
     );
   }
 
   @override
   WebbUIAccessibility lerp(
-      ThemeExtension<WebbUIAccessibility>? other, double t) {
+    ThemeExtension<WebbUIAccessibility>? other,
+    double t,
+  ) {
     if (other is! WebbUIAccessibility) {
       return this;
     }
@@ -49,6 +62,13 @@ class WebbUIAccessibility extends ThemeExtension<WebbUIAccessibility> {
           lerpDouble(minContrastRatio, other.minContrastRatio, t)!,
       minTouchTargetSize:
           lerpDouble(minTouchTargetSize, other.minTouchTargetSize, t)!,
+      minTextSizeLarge:
+          lerpDouble(minTextSizeLarge, other.minTextSizeLarge, t)!,
+      minTextSizeSmall:
+          lerpDouble(minTextSizeSmall, other.minTextSizeSmall, t)!,
     );
   }
+
+  double getMinTextSize(bool isLargeText) =>
+      isLargeText ? minTextSizeLarge : minTextSizeSmall;
 }

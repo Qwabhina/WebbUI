@@ -11,6 +11,11 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
   final Color warning;
   final Color error;
   final Color info;
+  // Add semantic colors
+  final Color surface;
+  final Color background;
+  final Color onPrimary;
+  final Color onSurface;
 
   const WebbUIColorPalette({
     required this.primary,
@@ -22,6 +27,10 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
     required this.warning,
     required this.error,
     required this.info,
+    required this.surface,
+    required this.background,
+    required this.onPrimary,
+    required this.onSurface,
   });
 
   /// Default light palette values, which can be overridden.
@@ -35,6 +44,11 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
     warning: Color(0xFFFFC107), // Yellow for warnings
     error: Color(0xFFF44336), // Red for errors
     info: Color(0xFF03A9F4), // Light blue for info
+    surface: Color(0xFFFFFFFF),
+    background: Color(0xFFFAFAFA),
+    onPrimary: Color(0xFFFFFFFF),
+    onSurface: Color(0xFF212121),
+    
   );
 
   /// Default dark palette values, with inverted neutrals and adjusted accents.
@@ -48,6 +62,10 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
     warning: Color(0xFFFFE082), // Lighter yellow
     error: Color(0xFFE57373), // Lighter red
     info: Color(0xFF4FC3F7), // Lighter blue
+    surface: Color(0xFF1E1E1E),
+    background: Color(0xFF121212),
+    onPrimary: Color(0xFF000000),
+    onSurface: Color(0xFFE0E0E0),
   );
 
   @override
@@ -61,6 +79,10 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
     Color? warning,
     Color? error,
     Color? info,
+    Color? surface,
+    Color? background,
+    Color? onPrimary,
+    Color? onSurface,
   }) {
     return WebbUIColorPalette(
       primary: primary ?? this.primary,
@@ -72,6 +94,10 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
       warning: warning ?? this.warning,
       error: error ?? this.error,
       info: info ?? this.info,
+      surface: surface ?? this.surface,
+      background: background ?? this.background,
+      onPrimary: onPrimary ?? this.onPrimary,
+      onSurface: onSurface ?? this.onSurface,
     );
   }
 
@@ -90,6 +116,10 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
       warning: Color.lerp(warning, other.warning, t)!,
       error: Color.lerp(error, other.error, t)!,
       info: Color.lerp(info, other.info, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      background: Color.lerp(background, other.background, t)!,
+      onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
+      onSurface: Color.lerp(onSurface, other.onSurface, t)!,
     );
   }
 }

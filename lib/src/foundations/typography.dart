@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'breakpoints.dart';
 
 /// Defines the typography system for WebbUI, with responsive scaling applied via context.
 class WebbUITypography extends ThemeExtension<WebbUITypography> {
@@ -42,11 +43,21 @@ class WebbUITypography extends ThemeExtension<WebbUITypography> {
         TextStyle(fontSize: 12, fontWeight: FontWeight.w400, height: 1.33),
   );
 
-  static double getScaleFactor(BuildContext context) {
+  // static double getScaleFactor(BuildContext context) {
+  //   final double width = MediaQuery.of(context).size.width;
+  //   if (width < 600) return 0.9; // Mobile: slightly smaller
+  //   if (width < 1024) return 1.0; // Tablet: base
+  //   return 1.1; // Desktop: slightly larger
+  // }
+
+static double getScaleFactor(BuildContext context) {
     final double width = MediaQuery.of(context).size.width;
-    if (width < 600) return 0.9; // Mobile: slightly smaller
-    if (width < 1024) return 1.0; // Tablet: base
-    return 1.1; // Desktop: slightly larger
+  
+    if (width < WebbUIBreakpoints.mobile) return 0.85; // Small mobile
+    if (width < 400) return 0.9; // Normal mobile
+    if (width < WebbUIBreakpoints.tablet) return 1.0; // Tablet
+    if (width < WebbUIBreakpoints.desktop) return 1.1; // Small desktop
+    return 1.2; // Large desktop
   }
 
   @override
@@ -94,7 +105,10 @@ class WebbUITypography extends ThemeExtension<WebbUITypography> {
     final double scaleFactor = getScaleFactor(context);
     return copyWith(
       displayLarge:
-          displayLarge.copyWith(fontSize: displayLarge.fontSize! * scaleFactor),
+          displayLarge.copyWith(
+        // fontSize: displayLarge.fontSize! * scaleFactor,
+        fontSize: (displayLarge.fontSize ?? 16.0) * scaleFactor,
+      ),
       displayMedium: displayMedium.copyWith(
           fontSize: displayMedium.fontSize! * scaleFactor),
       headlineLarge: headlineLarge.copyWith(
