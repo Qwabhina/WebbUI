@@ -7,27 +7,21 @@ extension WebbUITheme on BuildContext {
       Theme.of(this).extension<WebbUIColorPalette>() ??
       WebbUIColorPalette.defaultPalette;
 
-  // WebbUITypography get typography {
-  //   final base = Theme.of(this).extension<WebbUITypography>() ??
-  //       WebbUITypography.defaultTypography;
-  //   return base.scaleWithContext(this); // Applies responsive scaling
-  // }
 
   WebbUITypography get typographyBase =>
       Theme.of(this).extension<WebbUITypography>() ??
       WebbUITypography.defaultTypography;
 
+
   WebbUITypography get typography {
-    return typographyBase.scaleWithContext(this); // Now uses the base getter
+    return typographyBase.scaleWithContext(this);
   }
+
 
   WebbUISpacingGrid get spacingGrid =>
       Theme.of(this).extension<WebbUISpacingGrid>() ??
       WebbUISpacingGrid.defaultSpacingGrid;
 
-  // WebbUIIconTheme get iconTheme =>
-  //     Theme.of(this).extension<WebbUIIconTheme>() ??
-  //     WebbUIIconTheme.defaultIconTheme;
 
   WebbUIIconTheme get iconTheme {
     final base = Theme.of(this).extension<WebbUIIconTheme>() ??
@@ -51,11 +45,24 @@ extension WebbUITheme on BuildContext {
 
 /// Helper to create a light theme with WebbUI defaults.
 ThemeData webbUILightTheme() {
+  const baseTypography = WebbUITypography.defaultTypography;
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
     colorScheme: ColorScheme.fromSeed(
-        seedColor: WebbUIColorPalette.defaultPalette.primary),
+      seedColor: WebbUIColorPalette.defaultPalette.primary,
+    ),
+    // Add this to integrate with Material widgets
+    textTheme: TextTheme(
+      displayLarge: baseTypography.displayLarge,
+      displayMedium: baseTypography.displayMedium,
+      headlineLarge: baseTypography.headlineLarge,
+      headlineMedium: baseTypography.headlineMedium,
+      bodyLarge: baseTypography.bodyLarge,
+      bodyMedium: baseTypography.bodyMedium,
+      labelLarge: baseTypography.labelLarge,
+      labelMedium: baseTypography.labelMedium,
+    ),
     extensions: const <ThemeExtension<dynamic>>[
       WebbUIColorPalette.defaultPalette,
       WebbUITypography.defaultTypography,
@@ -70,12 +77,23 @@ ThemeData webbUILightTheme() {
 
 /// Helper to create a dark theme with WebbUI dark variants.
 ThemeData webbUIDarkTheme() {
+  const baseTypography = WebbUITypography.defaultTypography;
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: WebbUIColorPalette.darkPalette.primary,
-      brightness: Brightness.dark,
+      seedColor: WebbUIColorPalette.defaultPalette.primary,
+    ),
+    // Add this to integrate with Material widgets
+    textTheme: TextTheme(
+      displayLarge: baseTypography.displayLarge,
+      displayMedium: baseTypography.displayMedium,
+      headlineLarge: baseTypography.headlineLarge,
+      headlineMedium: baseTypography.headlineMedium,
+      bodyLarge: baseTypography.bodyLarge,
+      bodyMedium: baseTypography.bodyMedium,
+      labelLarge: baseTypography.labelLarge,
+      labelMedium: baseTypography.labelMedium,
     ),
     extensions: const <ThemeExtension<dynamic>>[
       WebbUIColorPalette.darkPalette,
