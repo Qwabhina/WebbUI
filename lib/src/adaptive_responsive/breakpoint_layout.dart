@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:webb_ui/src/foundations/breakpoints.dart';
 import 'package:webb_ui/src/theme.dart';
-
 
 class WebbUIBreakpointLayout extends StatelessWidget {
   final Widget mobileLayout;
   final Widget? tabletLayout;
   final Widget desktopLayout;
-  final double mobileBreakpoint;
-  final double tabletBreakpoint;
+  final EdgeInsets? mobilePadding;
+  final EdgeInsets? tabletPadding;
+  final EdgeInsets? desktopPadding;
+  final bool applyAutoPadding; // Whether to apply responsive padding
 
   const WebbUIBreakpointLayout({
     super.key,
     required this.mobileLayout,
     this.tabletLayout,
     required this.desktopLayout,
-    this.mobileBreakpoint = 600.0,
-    this.tabletBreakpoint = 1024.0,
+    this.mobilePadding,
+    this.tabletPadding,
+    this.desktopPadding,
+    this.applyAutoPadding = true,
   });
 
   @override
@@ -23,21 +27,31 @@ class WebbUIBreakpointLayout extends StatelessWidget {
     final double width = MediaQuery.of(context).size.width;
     final webbTheme = context;
 
-    if (width < mobileBreakpoint) {
-      return Padding(
-        padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
-        child: mobileLayout,
-      );
-    } else if (width < tabletBreakpoint) {
-      return Padding(
-        padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
-        child: tabletLayout ?? mobileLayout,
-      );
-    } else {
-      return Padding(
-        padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
-        child: desktopLayout,
-      );
+    EdgeInsets getDefaultPadding() {
+      final double spacing = webbTheme.spacingGrid.spacing(2);
+      return EdgeInsets.all(spacing);
     }
+
+    Widget layout;
+    EdgeInsets padding;
+
+    if (WebbUIBreakpoints.isMobile(width)) {
+      layout = mobileLayout;
+      padding = mobilePadding ??
+          (applyAutoPadding ? getDefaultPadding() : EdgeInsets.zero);
+    } else if (WebbUIBreakpoints.isTablet(width)) {
+      layout = tabletLayout ?? mobileLayout;
+      padding = tabletPadding ??
+          (applyAutoPadding ? getDefaultPadding() : EdgeInsets.zero);
+    } else {
+      layout = desktopLayout;
+      padding = desktopPadding ??
+          (applyAutoPadding ? getDefaultPadding() : EdgeInsets.zero);
+    }
+
+    return Padding(
+      padding: padding,
+      child: layout,
+    );
   }
 }

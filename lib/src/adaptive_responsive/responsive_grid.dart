@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:webb_ui/src/foundations/breakpoints.dart';
 import 'package:webb_ui/src/theme.dart';
 
 class WebbUIResponsiveGrid extends StatelessWidget {
@@ -20,9 +21,9 @@ class WebbUIResponsiveGrid extends StatelessWidget {
     final webbTheme = context;
     final double width = MediaQuery.of(context).size.width;
     final int effectiveCrossAxisCount = crossAxisCount ??
-        (width > 1024
+        (width >= WebbUIBreakpoints.desktop
             ? 4
-            : width > 600
+            : width >= WebbUIBreakpoints.tablet
                 ? 2
                 : 1); // Desktop: 4, Tablet: 2, Mobile: 1
 
