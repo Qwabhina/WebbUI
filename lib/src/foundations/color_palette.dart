@@ -6,6 +6,7 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
   final Color secondary;
   final Color neutralLight;
   final Color neutralDark;
+  final Color neutral;
   final Color success;
   final Color warning;
   final Color error;
@@ -16,6 +17,7 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
     required this.secondary,
     required this.neutralLight,
     required this.neutralDark,
+    required this.neutral,
     required this.success,
     required this.warning,
     required this.error,
@@ -28,6 +30,7 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
     secondary: Color(0xFF4CAF50), // Green for secondary
     neutralLight: Color(0xFFFFFFFF), // White for backgrounds
     neutralDark: Color(0xFF212121), // Dark gray for text
+    neutral: Color(0xFF212121), // Dark gray for text
     success: Color(0xFF4CAF50), // Green for success
     warning: Color(0xFFFFC107), // Yellow for warnings
     error: Color(0xFFF44336), // Red for errors
@@ -40,6 +43,7 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
     secondary: Color(0xFF81C784), // Lighter green
     neutralLight: Color(0xFF121212), // Dark background
     neutralDark: Color(0xFFE0E0E0), // Light text
+    neutral: Color(0xFFE0E0E0), // Light text
     success: Color(0xFF81C784), // Lighter green
     warning: Color(0xFFFFE082), // Lighter yellow
     error: Color(0xFFE57373), // Lighter red
@@ -52,6 +56,7 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
     Color? secondary,
     Color? neutralLight,
     Color? neutralDark,
+    Color? neutral,
     Color? success,
     Color? warning,
     Color? error,
@@ -62,6 +67,7 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
       secondary: secondary ?? this.secondary,
       neutralLight: neutralLight ?? this.neutralLight,
       neutralDark: neutralDark ?? this.neutralDark,
+      neutral: neutral ?? this.neutral,
       success: success ?? this.success,
       warning: warning ?? this.warning,
       error: error ?? this.error,
@@ -79,6 +85,7 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
       secondary: Color.lerp(secondary, other.secondary, t)!,
       neutralLight: Color.lerp(neutralLight, other.neutralLight, t)!,
       neutralDark: Color.lerp(neutralDark, other.neutralDark, t)!,
+      neutral: Color.lerp(neutral, other.neutral, t)!,
       success: Color.lerp(success, other.success, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
       error: Color.lerp(error, other.error, t)!,
