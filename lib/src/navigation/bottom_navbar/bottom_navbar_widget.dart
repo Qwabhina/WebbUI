@@ -1,17 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 
-class WebbUIBottomNavItem {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const WebbUIBottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-}
+import 'bottom_navbar_item.dart';
 
 class WebbUIBottomNav extends StatelessWidget {
   final List<WebbUIBottomNavItem> items;
