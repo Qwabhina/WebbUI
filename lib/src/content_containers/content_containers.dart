@@ -6,4 +6,4 @@ export 'chip.dart';
 export 'list_tile.dart';
 export 'list.dart';
 export 'modal.dart';
-export 'table.dart';
+export 'table/table.dart';
