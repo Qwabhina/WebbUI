@@ -1,17 +1,5 @@
 import 'package:flutter/material.dart';
 
-// /// Defines the available view types for the calendar.
-// enum CalendarView {
-//   day,
-//   week,
-//   workweek,
-//   month,
-//   schedule,
-//   timelineDay,
-//   timelineWeek,
-//   timelineWorkweek,
-// }
-
 // /// Represents a scheduled event or appointment.
 // class Event {
 //   final String subject;
@@ -45,7 +33,7 @@ enum CalendarView {
 
 /// Represents a calendar event.
 class Event {
-  final String id; // <--- FIXED: Now correctly included
+  final String id;
   final String subject;
   final DateTime startTime;
   final DateTime endTime;
