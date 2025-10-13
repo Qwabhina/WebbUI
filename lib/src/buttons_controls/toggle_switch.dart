@@ -5,12 +5,14 @@ class WebbUIToggleSwitch extends StatelessWidget {
   final bool value;
   final ValueChanged<bool>? onChanged;
   final String? label;
+  final bool disabled;
 
   const WebbUIToggleSwitch({
     super.key,
     required this.value,
     this.onChanged,
     this.label,
+    this.disabled = false,
   });
 
   @override
@@ -21,7 +23,7 @@ class WebbUIToggleSwitch extends StatelessWidget {
       children: [
         Switch(
           value: value,
-          onChanged: onChanged,
+          onChanged: disabled ? null : onChanged,
           activeColor: webbTheme.colorPalette.success,
           inactiveThumbColor: webbTheme.colorPalette.neutralDark,
           inactiveTrackColor:
@@ -40,7 +42,11 @@ class WebbUIToggleSwitch extends StatelessWidget {
         if (label != null)
           Padding(
             padding: EdgeInsets.only(left: webbTheme.spacingGrid.spacing(1)),
-            child: Text(label!, style: webbTheme.typography.bodyMedium),
+            child: Text(label!,
+                style: webbTheme.typography.bodyMedium.copyWith(
+                    color: disabled
+                        ? webbTheme.interactionStates.disabledColor
+                        : webbTheme.colorPalette.neutralDark)),
           ),
       ],
     );

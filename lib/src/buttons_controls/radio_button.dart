@@ -6,6 +6,7 @@ class WebbUIRadioButton<T> extends StatelessWidget {
   final T? groupValue;
   final ValueChanged<T?>? onChanged;
   final String? label;
+  final bool disabled;
 
   const WebbUIRadioButton({
     super.key,
@@ -13,6 +14,7 @@ class WebbUIRadioButton<T> extends StatelessWidget {
     required this.groupValue,
     this.onChanged,
     this.label,
+    this.disabled = false,
   });
 
   @override
@@ -24,8 +26,11 @@ class WebbUIRadioButton<T> extends StatelessWidget {
         Radio<T>(
           value: value,
           groupValue: groupValue,
-          onChanged: onChanged,
+          onChanged: disabled ? null : onChanged,
           fillColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return webbTheme.interactionStates.disabledColor.withOpacity(0.5);
+            }
             if (states.contains(WidgetState.selected)) {
               return webbTheme.colorPalette.primary;
             }
@@ -42,7 +47,11 @@ class WebbUIRadioButton<T> extends StatelessWidget {
         if (label != null)
           Padding(
             padding: EdgeInsets.only(left: webbTheme.spacingGrid.spacing(1)),
-            child: Text(label!, style: webbTheme.typography.bodyMedium),
+            child: Text(label!,
+                style: webbTheme.typography.bodyMedium.copyWith(
+                    color: disabled
+                        ? webbTheme.interactionStates.disabledColor
+                        : webbTheme.colorPalette.neutralDark)),
           ),
       ],
     );

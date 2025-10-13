@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:webb_ui/src/foundations/breakpoints.dart';
 import 'package:webb_ui/src/theme.dart';
 
-enum WebbUIButtonVariant { primary, secondary, tertiary }
+enum WebbUIButtonVariant {
+  primary,
+  secondary,
+  tertiary,
+  danger,
+  success,
+}
 
 class WebbUIButton extends StatelessWidget {
   final String label;
@@ -26,7 +33,8 @@ class WebbUIButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final webbTheme = context;
-    final bool isMobile = MediaQuery.of(context).size.width < 600;
+    final bool isMobile =
+        MediaQuery.of(context).size.width < WebbUIBreakpoints.mobile;
     final double minHeight =
         webbTheme.accessibility.minTouchTargetSize; // 48.0 for touch
     final double paddingHorizontal =
@@ -39,7 +47,7 @@ class WebbUIButton extends StatelessWidget {
     switch (variant) {
       case WebbUIButtonVariant.primary:
         backgroundColor = webbTheme.colorPalette.primary;
-        foregroundColor = Colors.white;
+        foregroundColor = webbTheme.colorPalette.onPrimary;
         borderSide = null;
         break;
       case WebbUIButtonVariant.secondary:
@@ -53,12 +61,31 @@ class WebbUIButton extends StatelessWidget {
         foregroundColor = webbTheme.colorPalette.primary;
         borderSide = null;
         break;
+      case WebbUIButtonVariant.danger:
+        backgroundColor = webbTheme.colorPalette.error;
+        foregroundColor = webbTheme.colorPalette.onPrimary;
+        borderSide = null;
+        break;
+      case WebbUIButtonVariant.success:
+        backgroundColor = webbTheme.colorPalette.success;
+        foregroundColor = webbTheme.colorPalette.onPrimary;
+        borderSide = null;
+        break;
     }
 
+    // Override for disabled state
     if (disabled) {
-      // Disabled button always uses interactionStates.disabledColor
-      backgroundColor = webbTheme.interactionStates.disabledColor;
-      foregroundColor = Colors.white.withOpacity(0.5);
+      if (variant == WebbUIButtonVariant.primary) {
+        backgroundColor = webbTheme.interactionStates.disabledColor;
+        foregroundColor = webbTheme.colorPalette.onPrimary.withOpacity(0.5);
+      } else {
+        backgroundColor = Colors.transparent;
+        foregroundColor = webbTheme.interactionStates.disabledColor;
+        if (variant == WebbUIButtonVariant.secondary) {
+          borderSide = BorderSide(
+              color: webbTheme.interactionStates.disabledColor, width: 1.5);
+        }
+      }
     }
 
     final scaledIconTheme = webbTheme.iconTheme;
@@ -68,8 +95,8 @@ class WebbUIButton extends StatelessWidget {
       backgroundColor: WidgetStateProperty.resolveWith<Color?>(
         (Set<WidgetState> states) {
           if (states.contains(WidgetState.disabled)) {
-            // Use the pre-calculated disabled color
-            return webbTheme.interactionStates.disabledColor;
+            // We already set the disabled background above, so we return it.
+            return backgroundColor;
           }
           return backgroundColor; // Use the variant-specific color
         },
@@ -121,21 +148,22 @@ class WebbUIButton extends StatelessWidget {
       minimumSize: WidgetStateProperty.all<Size>(Size(0, minHeight)),
     );
 
-
     return SizedBox(
       width: fullWidth ? double.infinity : null,
       height: minHeight,
       child: ElevatedButton(
         onPressed: disabled || isLoading ? null : onPressed,
-        // Pass the resolved ButtonStyle object here
         style: style, 
         child: isLoading
-            ? SizedBox(
-                width: scaledIconTheme.mediumSize, // Use scaled size for loader
-                height: scaledIconTheme.mediumSize,
-                child: CircularProgressIndicator(
-                  color: foregroundColor,
-                  strokeWidth: 2,
+            ? Semantics(
+                label: 'Loading', // Screen reader support
+                child: SizedBox(
+                  width: scaledIconTheme.mediumSize,
+                  height: scaledIconTheme.mediumSize,
+                  child: CircularProgressIndicator(
+                    color: foregroundColor,
+                    strokeWidth: 2,
+                  ),
                 ),
               )
             : Row(

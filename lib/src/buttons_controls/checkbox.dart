@@ -5,12 +5,14 @@ class WebbUICheckbox extends StatelessWidget {
   final bool value;
   final ValueChanged<bool?>? onChanged;
   final String? label;
+  final bool disabled;
 
   const WebbUICheckbox({
     super.key,
     required this.value,
     this.onChanged,
     this.label,
+    this.disabled = false,
   });
 
   @override
@@ -21,15 +23,21 @@ class WebbUICheckbox extends StatelessWidget {
       children: [
         Checkbox(
           value: value,
-          onChanged: onChanged,
+          onChanged: disabled ? null : onChanged,
           checkColor: Colors.white,
           fillColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return webbTheme.interactionStates.disabledColor.withOpacity(0.5);
+            }
             if (states.contains(WidgetState.selected)) {
               return webbTheme.colorPalette.primary;
             }
             return webbTheme.colorPalette.neutralLight;
           }),
-          side: BorderSide(color: webbTheme.colorPalette.neutralDark),
+          side: BorderSide(
+              color: disabled
+                  ? webbTheme.interactionStates.disabledColor
+                  : webbTheme.colorPalette.neutralDark),
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.pressed)) {
               return webbTheme.interactionStates.pressedOverlay;
@@ -41,7 +49,11 @@ class WebbUICheckbox extends StatelessWidget {
         if (label != null)
           Padding(
             padding: EdgeInsets.only(left: webbTheme.spacingGrid.spacing(1)),
-            child: Text(label!, style: webbTheme.typography.bodyMedium),
+            child: Text(label!,
+                style: webbTheme.typography.bodyMedium.copyWith(
+                    color: disabled
+                        ? webbTheme.interactionStates.disabledColor
+                        : webbTheme.colorPalette.neutralDark)),
           ),
       ],
     );
