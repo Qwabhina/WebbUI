@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' show lerpDouble;
 
+import 'breakpoints.dart';
+
 /// Defines spacing and grid system for WebbUI, responsive to breakpoints.
 class WebbUISpacingGrid extends ThemeExtension<WebbUISpacingGrid> {
   final double baseSpacing; // Base unit, e.g., 8.0
@@ -31,8 +33,9 @@ class WebbUISpacingGrid extends ThemeExtension<WebbUISpacingGrid> {
     final double width = MediaQuery.of(context).size.width;
     final WebbUISpacingGrid grid =
         Theme.of(context).extension<WebbUISpacingGrid>() ?? defaultSpacingGrid;
-    if (width < 600) return grid.mobileColumns;
-    if (width < 1024) return grid.tabletColumns;
+  
+    if (WebbUIBreakpoints.isMobile(width)) return grid.mobileColumns;
+    if (WebbUIBreakpoints.isTablet(width)) return grid.tabletColumns;
     return grid.desktopColumns;
   }
 
