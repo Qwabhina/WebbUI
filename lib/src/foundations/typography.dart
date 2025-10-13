@@ -43,13 +43,6 @@ class WebbUITypography extends ThemeExtension<WebbUITypography> {
         TextStyle(fontSize: 12, fontWeight: FontWeight.w400, height: 1.33),
   );
 
-  // static double getScaleFactor(BuildContext context) {
-  //   final double width = MediaQuery.of(context).size.width;
-  //   if (width < 600) return 0.9; // Mobile: slightly smaller
-  //   if (width < 1024) return 1.0; // Tablet: base
-  //   return 1.1; // Desktop: slightly larger
-  // }
-
 static double getScaleFactor(BuildContext context) {
     final double width = MediaQuery.of(context).size.width;
   
@@ -110,19 +103,26 @@ static double getScaleFactor(BuildContext context) {
         fontSize: (displayLarge.fontSize ?? 16.0) * scaleFactor,
       ),
       displayMedium: displayMedium.copyWith(
-          fontSize: displayMedium.fontSize! * scaleFactor),
+        fontSize: (displayMedium.fontSize ?? 16.0) * scaleFactor,
+      ),
       headlineLarge: headlineLarge.copyWith(
-          fontSize: headlineLarge.fontSize! * scaleFactor),
+        fontSize: (headlineLarge.fontSize ?? 16.0) * scaleFactor,
+      ),
       headlineMedium: headlineMedium.copyWith(
-          fontSize: headlineMedium.fontSize! * scaleFactor),
-      bodyLarge:
-          bodyLarge.copyWith(fontSize: bodyLarge.fontSize! * scaleFactor),
-      bodyMedium:
-          bodyMedium.copyWith(fontSize: bodyMedium.fontSize! * scaleFactor),
-      labelLarge:
-          labelLarge.copyWith(fontSize: labelLarge.fontSize! * scaleFactor),
-      labelMedium:
-          labelMedium.copyWith(fontSize: labelMedium.fontSize! * scaleFactor),
+        fontSize: (headlineMedium.fontSize ?? 16.0) * scaleFactor,
+      ),
+      bodyLarge: bodyLarge.copyWith(
+        fontSize: (bodyLarge.fontSize ?? 16.0) * scaleFactor,
+      ),
+      bodyMedium: bodyMedium.copyWith(
+        fontSize: (bodyMedium.fontSize ?? 16.0) * scaleFactor,
+      ),
+      labelLarge: labelLarge.copyWith(
+        fontSize: (labelLarge.fontSize ?? 16.0) * scaleFactor,
+      ),
+      labelMedium: labelMedium.copyWith(
+        fontSize: (labelMedium.fontSize ?? 16.0) * scaleFactor,
+      ),
     );
   }
 }
