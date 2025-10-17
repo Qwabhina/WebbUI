@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:webb_ui/src/foundations/breakpoints.dart';
 import 'package:webb_ui/src/theme.dart';
 
 /// Defines the size presets for the [WebbUIModal] component.
@@ -21,6 +22,8 @@ class WebbUIModal extends StatelessWidget {
   final WebbUIModalType type;
   final BoxConstraints? customConstraints; // For custom type
   final bool showCloseButton;
+  final bool barrierDismissible;
+  final Color? barrierColor;
 
   const WebbUIModal({
     super.key,
@@ -29,7 +32,9 @@ class WebbUIModal extends StatelessWidget {
     this.actions,
     this.type = WebbUIModalType.medium,
     this.customConstraints,
-    this.showCloseButton = true, // Default to true for user convenience
+    this.showCloseButton = true,
+    this.barrierDismissible = true,
+    this.barrierColor,
   });
 
   /// The standard way to display the modal dialog.
@@ -41,30 +46,41 @@ class WebbUIModal extends StatelessWidget {
     WebbUIModalType type = WebbUIModalType.medium,
     BoxConstraints? customConstraints,
     bool showCloseButton = true,
+    bool barrierDismissible = true,
+    Color? barrierColor,
   }) {
     return showDialog<T>(
       context: context,
-      barrierDismissible: true, // Default dialog behavior
+      barrierDismissible: barrierDismissible,
+      barrierColor: barrierColor ?? Colors.black54,
       builder: (context) => WebbUIModal(
         title: title,
         actions: actions,
         type: type,
         customConstraints: customConstraints,
         showCloseButton: showCloseButton,
+        barrierDismissible: barrierDismissible,
+        barrierColor: barrierColor,
         child: child,
       ),
     );
   }
 
-  /// Calculates the appropriate BoxConstraints based on the modal type and screen size.
   BoxConstraints _getConstraints(BuildContext context) {
-    final bool isMobile = MediaQuery.of(context).size.width < 600;
+    final bool isMobile =
+        MediaQuery.of(context).size.width < WebbUIBreakpoints.mobile;
+    final bool isTablet =
+        MediaQuery.of(context).size.width < WebbUIBreakpoints.tablet;
 
-    // Responsive max dimensions (used for fixed, scrollable, and fixed-size types)
-    final double maxWidth =
-        MediaQuery.of(context).size.width * (isMobile ? 0.95 : 0.7);
-    final double maxHeight =
-        MediaQuery.of(context).size.height * (isMobile ? 0.95 : 0.85);
+    final double maxWidth = isMobile
+        ? MediaQuery.of(context).size.width * 0.95
+        : isTablet
+            ? MediaQuery.of(context).size.width * 0.8
+            : MediaQuery.of(context).size.width * 0.6;
+    
+    final double maxHeight = isMobile
+        ? MediaQuery.of(context).size.height * 0.95
+        : MediaQuery.of(context).size.height * 0.85;
 
     switch (type) {
       case WebbUIModalType.custom:
@@ -83,7 +99,6 @@ class WebbUIModal extends StatelessWidget {
         return const BoxConstraints(
             minWidth: 600, maxWidth: 600, minHeight: 500, maxHeight: 500);
       case WebbUIModalType.fixed:
-        // Max limits for fixed-to-content, but allows content to define size
         return BoxConstraints(
           maxWidth: maxWidth,
           maxHeight: maxHeight,
@@ -91,7 +106,6 @@ class WebbUIModal extends StatelessWidget {
           minHeight: 200,
         );
       case WebbUIModalType.scrollable:
-        // Constrains the height for the scrollable area
         return BoxConstraints(
           maxWidth: maxWidth,
           maxHeight: maxHeight,
@@ -104,10 +118,27 @@ class WebbUIModal extends StatelessWidget {
     }
   }
 
+  Widget _buildContent(BuildContext webbTheme) {
+    final EdgeInsets padding = EdgeInsets.all(webbTheme.spacingGrid.spacing(2));
+
+    if (type == WebbUIModalType.scrollable) {
+      return SingleChildScrollView(
+        padding: padding,
+        child: child,
+      );
+    }
+
+    return Padding(
+      padding: padding,
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final webbTheme = context;
-    final bool isMobile = MediaQuery.of(context).size.width < 600;
+    final bool isMobile =
+        MediaQuery.of(context).size.width < WebbUIBreakpoints.mobile;
 
     // Fixed-size modals (mini, small, medium, large) and scrollable/fullscreen
     // need the content area to expand to fill the defined BoxConstraints.
@@ -134,30 +165,24 @@ class WebbUIModal extends StatelessWidget {
             borderRadius: type == WebbUIModalType.fullscreen
                 ? BorderRadius.zero
                 : BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-            boxShadow:
-                webbTheme.elevation.getShadows(3), // High elevation for a modal
+            boxShadow: webbTheme.elevation.getShadows(3),
           ),
-
           child: Column(
-            // Use MainAxisSize.max when content should expand; otherwise, shrink-wrap.
             mainAxisSize:
                 shouldExpandContent ? MainAxisSize.max : MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- HEADER/TITLE SECTION ---
               if (title != null || showCloseButton)
                 Padding(
                   padding: EdgeInsets.fromLTRB(
-                    webbTheme.spacingGrid.spacing(2), // Left
-                    webbTheme.spacingGrid.spacing(2), // Top
-                    webbTheme.spacingGrid
-                        .spacing(1), // Right (less if close button is present)
-                    webbTheme.spacingGrid.spacing(1), // Bottom
+                    webbTheme.spacingGrid.spacing(2),
+                    webbTheme.spacingGrid.spacing(2),
+                    webbTheme.spacingGrid.spacing(1),
+                    webbTheme.spacingGrid.spacing(1),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Title
                       if (title != null)
                         Flexible(
                           child: Padding(
@@ -174,10 +199,7 @@ class WebbUIModal extends StatelessWidget {
                             ),
                           ),
                         ),
-
-                      const Spacer(), // Pushes the close button to the right
-
-                      // Close Button
+                      const Spacer(),
                       if (showCloseButton)
                         IconButton(
                           icon: Icon(
@@ -188,7 +210,6 @@ class WebbUIModal extends StatelessWidget {
                           ),
                           onPressed: () => Navigator.of(context).pop(),
                           tooltip: 'Close',
-                          // Ensure the button meets minimum touch target size
                           constraints: BoxConstraints.tightFor(
                             width: webbTheme.accessibility.minTouchTargetSize,
                             height: webbTheme.accessibility.minTouchTargetSize,
@@ -230,26 +251,6 @@ class WebbUIModal extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  /// Helper to build the content widget with appropriate scrolling and padding.
-  Widget _buildContent(BuildContext webbTheme) {
-    // Determine the base padding for content area
-    final EdgeInsets padding = EdgeInsets.all(webbTheme.spacingGrid.spacing(2));
-
-    if (type == WebbUIModalType.scrollable) {
-      // Content is scrollable
-      return SingleChildScrollView(
-        padding: padding,
-        child: child,
-      );
-    }
-
-    // For all other types, just wrap in padding
-    return Padding(
-      padding: padding,
-      child: child,
     );
   }
 }
