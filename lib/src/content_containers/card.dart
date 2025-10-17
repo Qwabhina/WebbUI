@@ -42,6 +42,7 @@ class WebbUICard extends StatelessWidget {
 
   /// The callback when the card is tapped (REQUIRED for WebbUICardType.action).
   final VoidCallback? onCardTap;
+  final bool disabled;
 
   const WebbUICard({
     super.key,
@@ -54,14 +55,13 @@ class WebbUICard extends StatelessWidget {
     this.actions,
     this.subtitle,
     this.avatar,
-    this.onCardTap, // Required for action type
+    this.onCardTap,
+    this.disabled = false,
   });
 
   /// Builds the specific layout for non-action card types.
-  Widget _buildContent(BuildContext webbTheme) {
-    // final bool isMobile = MediaQuery.of(webbTheme).size.width < 600;
-    
-    // Default Padding based on theme spacing
+  Widget _buildContent(BuildContext context) {
+    final webbTheme = context;
     final defaultPadding =
         padding ?? EdgeInsets.all(webbTheme.spacingGrid.spacing(2));
 
@@ -175,15 +175,13 @@ class WebbUICard extends StatelessWidget {
     final decoration = BoxDecoration(
       color: webbTheme.colorPalette.neutralLight,
       borderRadius: BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-      boxShadow: elevated ? webbTheme.elevation.getShadows(1) : null,
+      boxShadow:
+          elevated && !disabled ? webbTheme.elevation.getShadows(1) : null,
     );
 
-    // Check if the card is an interactive action card
     final bool isActionCard = type == WebbUICardType.action;
 
-    // Use Material/InkWell for interactive cards to get themed splash/hover effects
-    if (isActionCard) {
-      // Must ensure onCardTap is provided for an action card
+    if (isActionCard && !disabled) {
       assert(onCardTap != null,
           'WebbUICardType.action requires an onCardTap callback.');
 
@@ -198,7 +196,6 @@ class WebbUICard extends StatelessWidget {
         shadowColor: elevated
             ? webbTheme.elevation.getShadows(1).first.color
             : Colors.transparent,
-
         child: InkWell(
           onTap: onCardTap,
           borderRadius:
@@ -213,11 +210,16 @@ class WebbUICard extends StatelessWidget {
       );
     }
 
-    // Use a standard Container for non-interactive card types (standard, media, profile)
-    return Container(
-      constraints: const BoxConstraints(maxWidth: double.infinity),
-      decoration: decoration,
-      child: _buildContent(context),
+    return Opacity(
+      opacity: disabled ? 0.6 : 1.0,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: double.infinity),
+        decoration: decoration,
+        child: AbsorbPointer(
+          absorbing: disabled,
+          child: _buildContent(context),
+        ),
+      ),
     );
   }
 }
