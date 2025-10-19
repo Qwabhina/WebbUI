@@ -1,8 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:webb_ui/src/theme.dart';
 import 'chart_definitions.dart';
 
-/// Handles the actual drawing of the chart on the canvas.
 class ChartPainter extends CustomPainter {
   final List<ChartSeries> series;
   final ChartType chartType;
@@ -11,10 +11,18 @@ class ChartPainter extends CustomPainter {
   final Offset? tapPosition;
   final double scale;
   final Offset panOffset;
-  final BuildContext context; // Use BuildContext to access WebbUITheme
+  final BuildContext webbTheme;
+  final ChartConfig config;
 
   late double _minX, _maxX, _minY, _maxY;
-  final _padding = 50.0;
+  late double _leftPadding, _rightPadding, _topPadding, _bottomPadding;
+
+  // Cache for performance
+  late List<ChartSeries> _cachedSeries;
+  late ChartType _cachedChartType;
+  late double _cachedScale;
+  late Offset _cachedPanOffset;
+  late Offset? _cachedTapPosition;
 
   ChartPainter({
     required this.series,
@@ -24,26 +32,52 @@ class ChartPainter extends CustomPainter {
     this.tapPosition,
     required this.scale,
     required this.panOffset,
-    required this.context, // Updated constructor
-  });
+    required this.webbTheme,
+    required this.config,
+  }) {
+    _cachedSeries = List.from(series);
+    _cachedChartType = chartType;
+    _cachedScale = scale;
+    _cachedPanOffset = panOffset;
+    _cachedTapPosition = tapPosition;
+    _calculatePadding();
+    _calculateBounds();
+  }
+
+  void _calculatePadding() {
+    _leftPadding = webbTheme.spacingGrid.spacing(4);
+    _rightPadding = webbTheme.spacingGrid.spacing(2);
+    _topPadding = webbTheme.spacingGrid.spacing(2);
+    _bottomPadding = webbTheme.spacingGrid.spacing(4);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (series.isEmpty || series.every((s) => s.data.isEmpty)) return;
+    final visibleSeries = series.where((s) => s.visible).toList();
+    
+    if (visibleSeries.isEmpty || visibleSeries.every((s) => s.data.isEmpty)) {
+      _drawEmptyState(canvas, size);
+      return;
+    }
 
-    // Pie and Doughnut charts have a separate drawing logic
+    // Pie and Doughnut charts have separate logic
     if (chartType == ChartType.pie || chartType == ChartType.doughnut) {
       _drawPieOrDoughnutChart(canvas, size);
       return;
     }
 
-    _calculateBounds();
-    _drawAxesAndGrid(canvas, size);
+    if (config.showGrid) {
+      _drawGrid(canvas, size);
+    }
+
+    if (config.showAxes) {
+      _drawAxes(canvas, size);
+    }
 
     // Prepare data for stacked charts
     Map<dynamic, double> stackedValues = {};
 
-    for (final s in series) {
+    for (final s in visibleSeries) {
       final effectiveChartType = s.chartType;
       switch (effectiveChartType) {
         case ChartType.line:
@@ -68,35 +102,74 @@ class ChartPainter extends CustomPainter {
           _drawStackedArea(canvas, size, s, stackedValues);
           break;
         default:
+          _drawLine(canvas, size, s); // Fallback
           break;
       }
     }
 
-    _drawTooltipAndCrosshair(canvas, size);
+    if (tapPosition != null) {
+      _drawTooltipAndCrosshair(canvas, size);
+    }
   }
 
-  // --- Bound Calculation ---
+  void _drawEmptyState(Canvas canvas, Size size) {
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'No data available',
+        style: webbTheme.typography.bodyMedium.copyWith(
+          color: webbTheme.colorPalette.neutralDark.withOpacity(0.5),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        (size.width - textPainter.width) / 2,
+        (size.height - textPainter.height) / 2,
+      ),
+    );
+  }
+
   void _calculateBounds() {
-    if (series.isEmpty) return;
+    final visibleSeries = series.where((s) => s.visible);
+    if (visibleSeries.isEmpty) {
+      _minX = 0;
+      _maxX = 1;
+      _minY = 0;
+      _maxY = 1;
+      return;
+    }
 
-    bool isStacked = chartType.name.contains("stacked");
+    bool isStacked = chartType.toString().contains("stacked");
 
-    // Initialize with first point
-    _minX = _maxX = series.first.data.first.x is DateTime
-        ? (series.first.data.first.x as DateTime)
-            .millisecondsSinceEpoch
-            .toDouble()
-        : series.first.data.first.x.toDouble();
-    _minY = 0; // Always start Y axis at 0 for clarity
-    _maxY = series.first.data.first.y;
+    // Initialize with first visible point
+    final firstVisibleSeries = visibleSeries.firstWhere(
+        (s) => s.data.isNotEmpty,
+        orElse: () => visibleSeries.first);
+    if (firstVisibleSeries.data.isEmpty) {
+      _minX = 0;
+      _maxX = 1;
+      _minY = 0;
+      _maxY = 1;
+      return;
+    }
+
+    final firstData = firstVisibleSeries.data.first;
+    _minX = _maxX = firstData.x is DateTime
+        ? (firstData.x as DateTime).millisecondsSinceEpoch.toDouble()
+        : (firstData.x as num).toDouble();
+    _minY = 0;
+    _maxY = firstData.y;
 
     Map<dynamic, double> stackedTotals = {};
 
-    for (var s in series) {
+    for (var s in visibleSeries) {
       for (var p in s.data) {
         double currentX = p.x is DateTime
             ? (p.x as DateTime).millisecondsSinceEpoch.toDouble()
-            : p.x.toDouble();
+            : (p.x as num).toDouble();
         if (currentX < _minX) _minX = currentX;
         if (currentX > _maxX) _maxX = currentX;
 
@@ -115,84 +188,119 @@ class ChartPainter extends CustomPainter {
     }
 
     // Add some padding to max values
-    _maxY *= 1.1;
+    if (_maxY > 0) {
+      _maxY *= 1.1;
+    } else {
+      _maxY = 1.0;
+    }
   }
 
-  // --- Coordinate Transformation ---
   double _getPixelX(dynamic x, Size size) {
-    double xVal =
-        x is DateTime ? x.millisecondsSinceEpoch.toDouble() : x.toDouble();
+    double xVal = x is DateTime
+        ? x.millisecondsSinceEpoch.toDouble()
+        : (x as num).toDouble();
     double range = _maxX - _minX;
-    if (range == 0) return _padding;
+    if (range == 0) return _leftPadding;
     double scaledRange = range / scale;
-    double viewMinX =
-        _minX - (panOffset.dx / (size.width - 2 * _padding)) * scaledRange;
-    return _padding +
-        ((xVal - viewMinX) / scaledRange) * (size.width - 2 * _padding);
+    double viewMinX = _minX -
+        (panOffset.dx / (size.width - _leftPadding - _rightPadding)) *
+            scaledRange;
+    return _leftPadding +
+        ((xVal - viewMinX) / scaledRange) *
+            (size.width - _leftPadding - _rightPadding);
   }
 
   double _getPixelY(double y, Size size) {
     double range = _maxY - _minY;
-    if (range == 0) return size.height - _padding;
+    if (range == 0) return size.height - _bottomPadding;
     double scaledRange = range / scale;
-    double viewMinY =
-        _minY + (panOffset.dy / (size.height - 2 * _padding)) * scaledRange;
-    return (size.height - _padding) -
-        ((y - viewMinY) / scaledRange) * (size.height - 2 * _padding);
+    double viewMinY = _minY +
+        (panOffset.dy / (size.height - _topPadding - _bottomPadding)) *
+            scaledRange;
+    return (size.height - _bottomPadding) -
+        ((y - viewMinY) / scaledRange) *
+            (size.height - _topPadding - _bottomPadding);
   }
 
-  // --- Drawing Methods: Axes and Grid ---
-  void _drawAxesAndGrid(Canvas canvas, Size size) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    final axisPaint = Paint()
-      ..color = colorScheme.onSurface.withOpacity(0.4)
-      ..strokeWidth = 1;
+  void _drawGrid(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = colorScheme.onSurface.withOpacity(0.15)
+      ..color = webbTheme.colorPalette.neutralDark.withOpacity(0.1)
       ..strokeWidth = 0.5;
-    final labelStyle =
-        TextStyle(color: colorScheme.onSurface.withOpacity(0.6), fontSize: 10);
+
+    // Vertical grid lines
+    int xGridCount = 5;
+    for (int i = 0; i <= xGridCount; i++) {
+      double val = _minX + (_maxX - _minX) * i / xGridCount;
+      double x = _getPixelX(val, size);
+      canvas.drawLine(
+        Offset(x, _topPadding),
+        Offset(x, size.height - _bottomPadding),
+        gridPaint,
+      );
+    }
+
+    // Horizontal grid lines
+    int yGridCount = 5;
+    for (int i = 0; i <= yGridCount; i++) {
+      double val = _minY + (_maxY - _minY) * i / yGridCount;
+      double y = _getPixelY(val, size);
+      canvas.drawLine(
+        Offset(_leftPadding, y),
+        Offset(size.width - _rightPadding, y),
+        gridPaint,
+      );
+    }
+  }
+
+  void _drawAxes(Canvas canvas, Size size) {
+    final axisPaint = Paint()
+      ..color = webbTheme.colorPalette.neutralDark.withOpacity(0.4)
+      ..strokeWidth = 1.5;
+
+    final labelStyle = webbTheme.typography.labelMedium.copyWith(
+      color: webbTheme.colorPalette.neutralDark.withOpacity(0.6),
+    );
 
     // Draw X and Y axis lines
-    canvas.drawLine(Offset(_padding, size.height - _padding),
-        Offset(size.width - _padding, size.height - _padding), axisPaint);
-    canvas.drawLine(Offset(_padding, size.height - _padding),
-        Offset(_padding, _padding), axisPaint);
+    canvas.drawLine(
+      Offset(_leftPadding, size.height - _bottomPadding),
+      Offset(size.width - _rightPadding, size.height - _bottomPadding),
+      axisPaint,
+    );
+    canvas.drawLine(
+      Offset(_leftPadding, size.height - _bottomPadding),
+      Offset(_leftPadding, _topPadding),
+      axisPaint,
+    );
 
-    // Draw Y-axis labels and grid lines
+    // Draw Y-axis labels
     int yLabelCount = 5;
     for (int i = 0; i <= yLabelCount; i++) {
       double val = _minY + (_maxY - _minY) * i / yLabelCount;
       double y = _getPixelY(val, size);
 
-      canvas.drawLine(
-          Offset(_padding, y), Offset(size.width - _padding, y), gridPaint);
-
-      final textSpan =
-          TextSpan(text: val.toStringAsFixed(0), style: labelStyle);
       final textPainter = TextPainter(
-          text: textSpan,
-          textAlign: TextAlign.right,
-          textDirection: TextDirection.ltr);
+        text: TextSpan(text: val.toStringAsFixed(0), style: labelStyle),
+        textAlign: TextAlign.right,
+        textDirection: TextDirection.ltr,
+      );
       textPainter.layout();
-      textPainter.paint(canvas,
-          Offset(_padding - textPainter.width - 5, y - textPainter.height / 2));
+      textPainter.paint(
+        canvas,
+        Offset(
+            _leftPadding - textPainter.width - 5, y - textPainter.height / 2),
+      );
     }
 
-    // Draw X-axis labels and grid lines
-    int xLabelCount = 5;
+    // Draw X-axis labels
+    int xLabelCount = min(5, series.expand((s) => s.data).length);
     for (int i = 0; i <= xLabelCount; i++) {
       dynamic val = _minX + (_maxX - _minX) * i / xLabelCount;
       double x = _getPixelX(val, size);
 
-      canvas.drawLine(
-          Offset(x, size.height - _padding), Offset(x, _padding), gridPaint);
-
       String label;
       if (xAxisType == AxisType.dateTime) {
         final date = DateTime.fromMillisecondsSinceEpoch(val.toInt());
-        // Use built-in properties for formatting MM/dd, removing intl dependency
         final month = date.month.toString().padLeft(2, '0');
         final day = date.day.toString().padLeft(2, '0');
         label = '$month/$day';
@@ -200,18 +308,19 @@ class ChartPainter extends CustomPainter {
         label = val.toStringAsFixed(1);
       }
 
-      final textSpan = TextSpan(text: label, style: labelStyle);
       final textPainter = TextPainter(
-          text: textSpan,
-          textAlign: TextAlign.center,
-          textDirection: TextDirection.ltr);
+        text: TextSpan(text: label, style: labelStyle),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      );
       textPainter.layout();
-      textPainter.paint(canvas,
-          Offset(x - textPainter.width / 2, size.height - _padding + 5));
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, size.height - _bottomPadding + 5),
+      );
     }
   }
 
-  // --- Drawing Methods: Chart Types ---
   void _drawLine(Canvas canvas, Size size, ChartSeries s) {
     final paint = Paint()
       ..color = s.color
@@ -228,13 +337,15 @@ class ChartPainter extends CustomPainter {
       } else {
         path.lineTo(x, y);
       }
-      canvas.drawCircle(Offset(x, y), 4, Paint()..color = s.color);
+      
+      // Draw data points
+      canvas.drawCircle(Offset(x, y), 3, Paint()..color = s.color);
     }
     canvas.drawPath(path, paint);
   }
 
   void _drawArea(Canvas canvas, Size size, ChartSeries s) {
-    _drawLine(canvas, size, s); // Draw the top line first
+    _drawLine(canvas, size, s);
 
     final paint = Paint()..color = s.color.withOpacity(0.3);
     final path = Path();
@@ -252,7 +363,8 @@ class ChartPainter extends CustomPainter {
 
   void _drawColumn(Canvas canvas, Size size, ChartSeries s) {
     final paint = Paint()..color = s.color;
-    final barWidth = (size.width - 2 * _padding) / (s.data.length * 2);
+    final barWidth =
+        (size.width - _leftPadding - _rightPadding) / (s.data.length * 2);
 
     for (final p in s.data) {
       final x = _getPixelX(p.x, size);
@@ -260,29 +372,34 @@ class ChartPainter extends CustomPainter {
       final y0 = _getPixelY(0, size);
 
       canvas.drawRect(
-          Rect.fromLTRB(x - barWidth / 2, y, x + barWidth / 2, y0), paint);
+        Rect.fromLTRB(x - barWidth / 2, y, x + barWidth / 2, y0),
+        paint,
+      );
     }
   }
 
   void _drawBar(Canvas canvas, Size size, ChartSeries s) {
     final paint = Paint()..color = s.color;
-    final barHeight = (size.height - 2 * _padding) / (s.data.length * 2);
+    final barHeight =
+        (size.height - _topPadding - _bottomPadding) / (s.data.length * 2);
 
     for (final p in s.data) {
       final x = _getPixelX(p.y, size);
-      final y = _getPixelY(
-          p.x, size); // Y-axis is categorical, so pixel positions are different
+      final y = _getPixelY(p.x, size);
       final x0 = _getPixelX(0, size);
 
       canvas.drawRect(
-          Rect.fromLTRB(x0, y - barHeight / 2, x, y + barHeight / 2), paint);
+        Rect.fromLTRB(x0, y - barHeight / 2, x, y + barHeight / 2),
+        paint,
+      );
     }
   }
 
   void _drawStackedColumn(Canvas canvas, Size size, ChartSeries s,
       Map<dynamic, double> stackedValues) {
     final paint = Paint()..color = s.color;
-    final barWidth = (size.width - 2 * _padding) / (s.data.length * 2);
+    final barWidth =
+        (size.width - _leftPadding - _rightPadding) / (s.data.length * 2);
 
     for (final p in s.data) {
       final lastY = stackedValues[p.x] ?? 0;
@@ -293,7 +410,9 @@ class ChartPainter extends CustomPainter {
       final y1 = _getPixelY(currentY, size);
 
       canvas.drawRect(
-          Rect.fromLTRB(x - barWidth / 2, y1, x + barWidth / 2, y0), paint);
+        Rect.fromLTRB(x - barWidth / 2, y1, x + barWidth / 2, y0),
+        paint,
+      );
       stackedValues[p.x] = currentY;
     }
   }
@@ -304,7 +423,6 @@ class ChartPainter extends CustomPainter {
     final path = Path();
 
     final lastPoint = s.data.last;
-
     final lastY0 = stackedValues[lastPoint.x] ?? 0;
     path.moveTo(_getPixelX(lastPoint.x, size), _getPixelY(lastY0, size));
 
@@ -327,44 +445,72 @@ class ChartPainter extends CustomPainter {
 
   void _drawStackedBar(Canvas canvas, Size size, ChartSeries s,
       Map<dynamic, double> stackedValues) {
-    // Similar logic to stacked column, but with axes flipped.
+    final paint = Paint()..color = s.color;
+    final barHeight =
+        (size.height - _topPadding - _bottomPadding) / (s.data.length * 2);
+
+    for (final p in s.data) {
+      final lastX = stackedValues[p.x] ?? 0;
+      final currentX = lastX + p.y;
+
+      final y = _getPixelY(p.x, size);
+      final x0 = _getPixelX(lastX, size);
+      final x1 = _getPixelX(currentX, size);
+
+      canvas.drawRect(
+        Rect.fromLTRB(x0, y - barHeight / 2, x1, y + barHeight / 2),
+        paint,
+      );
+      stackedValues[p.x] = currentX;
+    }
   }
 
   void _drawPieOrDoughnutChart(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = min(size.width, size.height) / 2.5;
-    final total = series.fold<double>(
+    final radius = min(size.width, size.height) / 3;
+
+    // Calculate total from visible series only
+    final visibleSeries = series.where((s) => s.visible);
+    final total = visibleSeries.fold<double>(
         0, (sum, s) => sum + s.data.fold(0, (s, p) => s + p.y));
+
+    if (total == 0) return;
 
     double startAngle = -pi / 2;
 
-    for (final s in series) {
+    for (final s in visibleSeries) {
       for (final p in s.data) {
         final sweepAngle = (p.y / total) * 2 * pi;
         final paint = Paint()..color = s.color;
 
-        canvas.drawArc(Rect.fromCircle(center: center, radius: radius),
-            startAngle, sweepAngle, true, paint);
+        canvas.drawArc(
+          Rect.fromCircle(center: center, radius: radius),
+          startAngle,
+          sweepAngle,
+          true,
+          paint,
+        );
         startAngle += sweepAngle;
       }
     }
 
     if (chartType == ChartType.doughnut) {
-      canvas.drawCircle(center, radius * 0.5,
-          Paint()..color = Theme.of(context).scaffoldBackgroundColor);
+      canvas.drawCircle(
+        center,
+        radius * 0.5,
+        Paint()..color = webbTheme.colorPalette.background,
+      );
     }
   }
 
-  // --- Drawing Methods: User Interaction ---
   void _drawTooltipAndCrosshair(Canvas canvas, Size size) {
     if (tapPosition == null) return;
 
-    // Find nearest point
     ChartData? nearestPoint;
     ChartSeries? nearestSeries;
     double minDistance = double.infinity;
 
-    for (final s in series) {
+    for (final s in series.where((s) => s.visible)) {
       for (final p in s.data) {
         final px = _getPixelX(p.x, size);
         final py = _getPixelY(p.y, size);
@@ -380,29 +526,38 @@ class ChartPainter extends CustomPainter {
     if (nearestPoint != null && minDistance < 30) {
       final px = _getPixelX(nearestPoint.x, size);
       final py = _getPixelY(nearestPoint.y, size);
-      final colorScheme = Theme.of(context).colorScheme;
 
       // Draw Crosshair
       final crosshairPaint = Paint()
-        ..color = colorScheme.onSurface.withOpacity(0.5)
+        ..color = webbTheme.colorPalette.neutralDark.withOpacity(0.3)
         ..strokeWidth = 1
         ..style = PaintingStyle.stroke;
-      canvas.drawLine(Offset(px, _padding), Offset(px, size.height - _padding),
-          crosshairPaint);
-      canvas.drawLine(Offset(_padding, py), Offset(size.width - _padding, py),
-          crosshairPaint);
+      canvas.drawLine(
+        Offset(px, _topPadding),
+        Offset(px, size.height - _bottomPadding),
+        crosshairPaint,
+      );
+      canvas.drawLine(
+        Offset(_leftPadding, py),
+        Offset(size.width - _rightPadding, py),
+        crosshairPaint,
+      );
 
       // Draw Tooltip
       final tooltipText = "${nearestSeries!.name}\n"
           "X: ${nearestPoint.x}\n"
           "Y: ${nearestPoint.y.toStringAsFixed(2)}";
       final textSpan = TextSpan(
-          text: tooltipText,
-          style: TextStyle(color: colorScheme.onInverseSurface, fontSize: 12));
+        text: tooltipText,
+        style: webbTheme.typography.labelMedium.copyWith(
+          color: webbTheme.colorPalette.onSurface,
+        ),
+      );
       final textPainter = TextPainter(
-          text: textSpan,
-          textAlign: TextAlign.left,
-          textDirection: TextDirection.ltr);
+        text: textSpan,
+        textAlign: TextAlign.left,
+        textDirection: TextDirection.ltr,
+      );
       textPainter.layout();
 
       final rectWidth = textPainter.width + 16;
@@ -419,16 +574,34 @@ class ChartPainter extends CustomPainter {
       final tooltipRect = Rect.fromLTWH(rectX, rectY, rectWidth, rectHeight);
 
       final tooltipPaint = Paint()
-        ..color = colorScheme.inverseSurface.withOpacity(0.8);
+        ..color = webbTheme.colorPalette.surface.withOpacity(0.9);
       canvas.drawRRect(
-          RRect.fromRectAndRadius(tooltipRect, const Radius.circular(8)),
-          tooltipPaint);
+        RRect.fromRectAndRadius(
+            tooltipRect, Radius.circular(webbTheme.spacingGrid.baseSpacing)),
+        tooltipPaint,
+      );
+
+      // Draw border
+      final borderPaint = Paint()
+        ..color = webbTheme.colorPalette.neutralDark.withOpacity(0.2)
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+            tooltipRect, Radius.circular(webbTheme.spacingGrid.baseSpacing)),
+        borderPaint,
+      );
+
       textPainter.paint(canvas, tooltipRect.topLeft + const Offset(8, 4));
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true; // Repaint on any change for simplicity
+  bool shouldRepaint(covariant ChartPainter oldDelegate) {
+    return _cachedSeries != series ||
+        _cachedChartType != chartType ||
+        _cachedScale != scale ||
+        _cachedPanOffset != panOffset ||
+        _cachedTapPosition != tapPosition;
   }
 }
