@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'table_models.dart';
 
 /// Manages all mutable state for the [WebbUITable], including data handling,
@@ -7,7 +6,7 @@ import 'table_models.dart';
 class TableStateManager<T> with ChangeNotifier {
   // --- Data and Loading State ---
   final List<WebbUIColumn<T>> _columns;
-  List<WebbUIRow<T>> _originalRows; // The full, unfiltered, unsorted dataset
+  List<WebbUIRow<T>> _originalRows;
   bool _isLoading = false;
   bool _isInitialLoad = true;
   bool _isInfiniteScroll = false;
@@ -17,7 +16,7 @@ class TableStateManager<T> with ChangeNotifier {
 
   // --- Sorting State ---
   String? sortColumnId;
-  bool isAscending = true; // True for ascending, false for descending
+  bool isAscending = true;
 
   // --- Pagination State ---
   int _currentPage = 0;
@@ -48,59 +47,66 @@ class TableStateManager<T> with ChangeNotifier {
     required List<WebbUIColumn<T>> columns,
     required List<WebbUIRow<T>> initialRows,
     int itemsPerPage = 10,
-    bool isPaginated = false,
+    this.isPaginated = false,
     bool isRowSelectionEnabled = false,
     bool isInfiniteScroll = false,
   })  : _columns = columns,
         _originalRows = initialRows,
         _itemsPerPage = itemsPerPage,
-        isPaginated = isPaginated,
         _isRowSelectionEnabled = isRowSelectionEnabled,
         _isInfiniteScroll = isInfiniteScroll {
-    // Initial data processing
     _processData();
     _isInitialLoad = false;
   }
 
-  // --- Data Processing ---
-
-  /// Applies sorting, filtering, and pagination to determine [_displayedRows].
   void _processData() {
     List<WebbUIRow<T>> filteredAndSorted = List.from(_originalRows);
 
-    // 1. Filtering (Placeholder: Real filtering logic would go here)
-    // For now, we use all rows.
-
-    // 2. Sorting
+    // Sorting
     if (sortColumnId != null) {
-      final sortColumn = _columns.firstWhere((col) => col.id == sortColumnId);
-      if (sortColumn.isSortable) {
-        filteredAndSorted.sort((a, b) {
-          final aValue = a.data[sortColumnId];
-          final bValue = b.data[sortColumnId];
-          int comparison = 0;
+      try {
+        final sortColumn = _columns.firstWhere((col) => col.id == sortColumnId);
+        if (sortColumn.isSortable) {
+          filteredAndSorted.sort((a, b) {
+            final aValue = a.data[sortColumnId];
+            final bValue = b.data[sortColumnId];
+            int comparison = 0;
 
-          if (aValue is Comparable && bValue is Comparable) {
-            comparison = aValue.compareTo(bValue);
-          } else if (aValue != null && bValue == null) {
-            comparison = 1;
-          } else if (aValue == null && bValue != null) {
-            comparison = -1;
-          }
+            if (aValue == null && bValue == null) {
+              comparison = 0;
+            } else if (aValue == null) {
+              comparison = -1;
+            } else if (bValue == null) {
+              comparison = 1;
+            } else if (aValue is Comparable && bValue is Comparable) {
+              comparison = aValue.compareTo(bValue);
+            } else {
+              comparison = aValue.toString().compareTo(bValue.toString());
+            }
 
-          return isAscending ? comparison : -comparison;
-        });
+            return isAscending ? comparison : -comparison;
+          });
+        }
+      } catch (e) {
+        // Column not found, ignore sorting
+        if (kDebugMode) {
+          print('Sort column not found: $sortColumnId');
+        }
       }
     }
 
-    // 3. Pagination/Infinite Scroll
+    // Pagination/Infinite Scroll
     if (isPaginated) {
       final startIndex = _currentPage * _itemsPerPage;
       final endIndex = startIndex + _itemsPerPage;
-      _displayedRows = filteredAndSorted.sublist(
-        startIndex,
-        endIndex.clamp(0, filteredAndSorted.length),
-      );
+      if (startIndex < filteredAndSorted.length) {
+        _displayedRows = filteredAndSorted.sublist(
+          startIndex,
+          endIndex.clamp(0, filteredAndSorted.length),
+        );
+      } else {
+        _displayedRows = [];
+      }
     } else if (_isInfiniteScroll) {
       // In infinite scroll mode, _displayedRows is built up over time.
       // We would append new data, but for this client-side demo, we use the
@@ -125,7 +131,7 @@ class TableStateManager<T> with ChangeNotifier {
       sortColumnId = columnId;
       isAscending = true;
     }
-    _currentPage = 0; // Reset pagination on sort
+    _currentPage = 0;
     _processData();
   }
 
@@ -165,16 +171,19 @@ class TableStateManager<T> with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates the value of a specific cell and clears the editing state.
   void updateCellValue(String rowId, String columnId, dynamic newValue) {
-    // Find the row to update in the original data source
-    final row = _originalRows.firstWhere((r) => r.id == rowId);
-    row.data[columnId] =
-        newValue; // Note: This mutates the map inside the row object
-
-    // Recalculate everything (sorting, filtering, etc.)
-    _processData();
-    clearEditingCell(); // Exit edit mode
+    try {
+      final rowIndex = _originalRows.indexWhere((r) => r.id == rowId);
+      if (rowIndex != -1) {
+        _originalRows[rowIndex].data[columnId] = newValue;
+        _processData();
+        clearEditingCell();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating cell value: $e');
+      }
+    }
   }
 
   // --- Async/Lazy Loading Methods ---
@@ -198,7 +207,29 @@ class TableStateManager<T> with ChangeNotifier {
     // _originalRows.addAll(newRows);
 
     _isLoading = false;
-    _currentPage++; // Even in infinite scroll, tracking page helps
+    _currentPage++;
     _processData();
+  }
+
+  // New method to update entire dataset
+  void updateData(List<WebbUIRow<T>> newRows) {
+    _originalRows = newRows;
+    _currentPage = 0;
+    _selectedRows.clear();
+    _editingCell = null;
+    _processData();
+  }
+
+  // New method to clear selection
+  void clearSelection() {
+    _selectedRows.clear();
+    notifyListeners();
+  }
+
+  // New method to select all visible rows
+  void selectAllVisible() {
+    if (!_isRowSelectionEnabled) return;
+    _selectedRows.addAll(_displayedRows);
+    notifyListeners();
   }
 }
