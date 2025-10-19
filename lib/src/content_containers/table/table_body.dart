@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:webb_ui/src/buttons_controls/buttons_controls.dart';
 import 'package:webb_ui/src/feedback_status/loaders/spinner.dart';
+import 'package:webb_ui/src/forms_inputs/text_input/editable_text_field.dart';
 import 'package:webb_ui/src/forms_inputs/text_input/text_input.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'table_models.dart';
@@ -18,7 +19,6 @@ class WebbUITableBody<T> extends StatefulWidget {
 
 class _WebbUITableBodyState<T> extends State<WebbUITableBody<T>> {
   final ScrollController _scrollController = ScrollController();
-  final Map<String, TextEditingController> _textControllers = {};
 
   @override
   void initState() {
@@ -30,15 +30,9 @@ class _WebbUITableBodyState<T> extends State<WebbUITableBody<T>> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
-    // Dispose all text controllers
-    for (var controller in _textControllers.values) {
-      controller.dispose();
-    }
-    _textControllers.clear();
     super.dispose();
   }
 
-  /// Listener for infinite scrolling.
   void _onScroll() {
     final stateManager =
         Provider.of<TableStateManager<T>>(context, listen: false);
@@ -46,16 +40,8 @@ class _WebbUITableBodyState<T> extends State<WebbUITableBody<T>> {
         !stateManager.isLoading &&
         _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200) {
-      // Load more data when user is 200px from the bottom
       stateManager.loadMoreData();
     }
-  }
-
-  TextEditingController _getTextController(String key, String initialValue) {
-    if (!_textControllers.containsKey(key)) {
-      _textControllers[key] = TextEditingController(text: initialValue);
-    }
-    return _textControllers[key]!;
   }
 
   @override
@@ -139,8 +125,9 @@ class _WebbUITableBodyState<T> extends State<WebbUITableBody<T>> {
                       onEditComplete: (newValue) {
                         stateManager.updateCellValue(row.id, col.id, newValue);
                       },
-                      getTextController: (initialValue) => _getTextController(
-                          '${row.id}-${col.id}', initialValue),
+                      onEditCancel: () {
+                        stateManager.clearEditingCell();
+                      },
                     );
                   }),
                 ],
@@ -153,13 +140,12 @@ class _WebbUITableBodyState<T> extends State<WebbUITableBody<T>> {
   }
 }
 
-/// A widget that renders a single cell and handles editing.
-class _TableCellWidget<T> extends StatefulWidget {
+class _TableCellWidget<T> extends StatelessWidget {
   final WebbUIRow<T> row;
   final WebbUIColumn<T> column;
   final dynamic data;
   final Function(dynamic) onEditComplete;
-  final TextEditingController Function(String) getTextController;
+  final VoidCallback onEditCancel;
 
   const _TableCellWidget({
     super.key,
@@ -167,61 +153,28 @@ class _TableCellWidget<T> extends StatefulWidget {
     required this.column,
     required this.data,
     required this.onEditComplete,
-    required this.getTextController,
+    required this.onEditCancel,
   });
-
-  @override
-  State<_TableCellWidget<T>> createState() => _TableCellWidgetState<T>();
-}
-
-class _TableCellWidgetState<T> extends State<_TableCellWidget<T>> {
-  late bool _isEditing;
-
-  @override
-  void initState() {
-    super.initState();
-    _isEditing = false;
-  }
-
-  void _startEditing() {
-    setState(() {
-      _isEditing = true;
-    });
-  }
-
-  void _saveEditing(dynamic newValue) {
-    setState(() {
-      _isEditing = false;
-    });
-    widget.onEditComplete(newValue);
-  }
-
-  void _cancelEditing() {
-    setState(() {
-      _isEditing = false;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     final stateManager =
         Provider.of<TableStateManager<T>>(context, listen: false);
-    final isEditing = stateManager.editingCell?.rowId == widget.row.id &&
-        stateManager.editingCell?.columnId == widget.column.id;
-
-    if (!_isEditing && isEditing) {
-      _startEditing();
-    }
+    final isEditing = stateManager.editingCell?.rowId == row.id &&
+        stateManager.editingCell?.columnId == column.id;
 
     Widget content;
-    if (_isEditing) {
-      content = _buildCellEditor(context, widget.data);
+    
+    if (isEditing) {
+      // Use WebbUIEditableTextField for editing mode
+      content = _buildCellEditor(context);
     } else {
-      if (widget.column.cellRenderer != null) {
-        content = widget.column.cellRenderer!(context, widget.data, widget.row);
+      // Use custom renderer or default text for display mode
+      if (column.cellRenderer != null) {
+        content = column.cellRenderer!(context, data, row);
       } else {
         content = Text(
-          widget.data?.toString() ?? '',
+          data?.toString() ?? '',
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium,
         );
@@ -229,118 +182,123 @@ class _TableCellWidgetState<T> extends State<_TableCellWidget<T>> {
     }
 
     return Expanded(
-      flex: widget.column.widthFlex,
+      flex: column.widthFlex,
       child: GestureDetector(
-        onTap: () =>
-            stateManager.setEditingCell(widget.row.id, widget.column.id),
+        onTap: () {
+          if (!isEditing && column.columnType != WebbUIColumnType.boolean) {
+            stateManager.setEditingCell(row.id, column.id);
+          }
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(
             horizontal: 16.0,
             vertical: 12.0,
           ),
-          alignment: widget.column.alignment,
+          alignment: column.alignment,
           child: content,
         ),
       ),
     );
   }
 
-  /// Builds the appropriate editor based on the column type.
-  Widget _buildCellEditor(BuildContext context, dynamic currentValue) {
-    final webbTheme = context;
-
+  Widget _buildCellEditor(BuildContext context) {
     // Use custom editor if provided
-    if (widget.column.editCellRenderer != null) {
-      return widget.column.editCellRenderer!(
+    if (column.editCellRenderer != null) {
+      return column.editCellRenderer!(
         context,
-        currentValue,
-        _saveEditing,
-        widget.row,
+        data,
+        onEditComplete,
+        row,
       );
     }
 
-    // Default editors based on column type
-    switch (widget.column.columnType) {
-      case WebbUIColumnType.text:
-        final controller =
-            widget.getTextController(currentValue?.toString() ?? '');
-        return WebbUITextField(
-          controller: controller,
-          onSubmitted: (value) => _saveEditing(value),
-          onCancel: _cancelEditing,
-        );
-
-      case WebbUIColumnType.number:
-      case WebbUIColumnType.currency:
-      case WebbUIColumnType.percentage:
-        final controller =
-            widget.getTextController(currentValue?.toString() ?? '');
-        return WebbUITextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          onSubmitted: (value) {
-            final numValue = num.tryParse(value) ?? 0;
-            _saveEditing(numValue);
-          },
-          onCancel: _cancelEditing,
-        );
-
-      case WebbUIColumnType.boolean:
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            WebbUICheckbox(
-              value: currentValue as bool? ?? false,
-              onChanged: (value) => _saveEditing(value),
-            ),
-            SizedBox(width: webbTheme.spacingGrid.spacing(1)),
-            WebbUIButton(
-              label: 'Save',
-              onPressed: () => _saveEditing(currentValue),
-              variant: WebbUIButtonVariant.primary,
-            ),
-            SizedBox(width: webbTheme.spacingGrid.spacing(0.5)),
-            WebbUIButton(
-              label: 'Cancel',
-              onPressed: _cancelEditing,
-              variant: WebbUIButtonVariant.tertiary,
-            ),
-          ],
-        );
-
-      case WebbUIColumnType.selection:
-        return WebbUIDropdown<dynamic>(
-          value: currentValue,
-          items: widget.column.selectionOptions
-                  ?.map((opt) => DropdownMenuItem(
-                        value: opt,
-                        child: Text(opt.toString()),
-                      ))
-                  .toList() ??
-              [],
-          onChanged: (newValue) => _saveEditing(newValue),
-        );
-
-      case WebbUIColumnType.date:
-      case WebbUIColumnType.time:
-      case WebbUIColumnType.dateTime:
-        // Simplified date editor
-        final controller =
-            widget.getTextController(currentValue?.toString() ?? '');
-        return WebbUITextField(
-          controller: controller,
-          onSubmitted: (value) => _saveEditing(value),
-          onCancel: _cancelEditing,
-        );
-
-      default:
-        final controller =
-            widget.getTextController(currentValue?.toString() ?? '');
-        return WebbUITextField(
-          controller: controller,
-          onSubmitted: (value) => _saveEditing(value),
-          onCancel: _cancelEditing,
-        );
+    // Use WebbUIEditableTextField for text-based columns
+    if (_isTextBasedColumn(column.columnType)) {
+      return WebbUIEditableTextField(
+        initialValue: data?.toString() ?? '',
+        onSave: onEditComplete,
+        onCancel: onEditCancel,
+        showActions:
+            false, // Hide buttons for table cells - use keyboard shortcuts
+        autoFocus: true,
+        clearOnCancel: false, // Restore original value on cancel
+      );
     }
+
+    // Special handling for boolean columns
+    if (column.columnType == WebbUIColumnType.boolean) {
+      return _buildBooleanEditor(context);
+    }
+
+    // Special handling for selection columns
+    if (column.columnType == WebbUIColumnType.selection) {
+      return _buildSelectionEditor(context);
+    }
+
+    // Fallback to basic text field
+    return WebbUIEditableTextField(
+      initialValue: data?.toString() ?? '',
+      onSave: onEditComplete,
+      onCancel: onEditCancel,
+      showActions: false,
+      autoFocus: true,
+    );
+  }
+
+  bool _isTextBasedColumn(WebbUIColumnType columnType) {
+    return [
+      WebbUIColumnType.text,
+      WebbUIColumnType.number,
+      WebbUIColumnType.currency,
+      WebbUIColumnType.percentage,
+      WebbUIColumnType.date,
+      WebbUIColumnType.time,
+      WebbUIColumnType.dateTime,
+    ].contains(columnType);
+  }
+
+  Widget _buildBooleanEditor(BuildContext context) {
+    final webbTheme = context;
+    final currentValue = data as bool? ?? false;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        WebbUICheckbox(
+          value: currentValue,
+          onChanged: (value) => onEditComplete(value),
+        ),
+        SizedBox(width: webbTheme.spacingGrid.spacing(1)),
+        // Optional: Add quick save/cancel for boolean fields
+        WebbUIButton(
+          label: 'Save',
+          onPressed: () => onEditComplete(currentValue),
+          variant: WebbUIButtonVariant.primary,
+        ),
+        SizedBox(width: webbTheme.spacingGrid.spacing(0.5)),
+        WebbUIButton(
+          label: 'Cancel',
+          onPressed: onEditCancel,
+          variant: WebbUIButtonVariant.tertiary,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelectionEditor(BuildContext context) {
+    return WebbUIDropdown<dynamic>(
+      value: data,
+      items: column.selectionOptions
+              ?.map((opt) => DropdownMenuItem(
+                    value: opt,
+                    child: Text(opt.toString()),
+                  ))
+              .toList() ??
+          [],
+      onChanged: (newValue) {
+        onEditComplete(newValue);
+        onEditCancel(); // Auto-close after selection
+      },
+    );
   }
 }
