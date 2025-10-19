@@ -8,70 +8,87 @@ import 'validation_states.dart';
 /// This ensures consistency across [WebbUITextField], [WebbUIPasswordField],
 /// and any future input fields by acting as a single factory for [InputDecoration].
 class WebbUIInputDecoration {
-  // Changed from StatelessWidget to a regular class
   const WebbUIInputDecoration({
     required this.webbTheme,
     this.label,
     this.hintText,
     this.helperText,
+    this.prefixIcon,
     this.suffixIcon,
     this.validationState = WebbUIValidationState.none,
     this.validationMessage,
     this.maxLines = 1,
+    this.maxLength,
+    this.currentLength,
+    this.isFocused = false,
+    this.isDisabled = false,
   });
 
   final BuildContext webbTheme;
   final String? label;
   final String? hintText;
   final String? helperText;
+  final Widget? prefixIcon;
   final Widget? suffixIcon;
   final WebbUIValidationState validationState;
   final String? validationMessage;
   final int? maxLines;
+  final int? maxLength;
+  final int? currentLength;
+  final bool isFocused;
+  final bool isDisabled;
 
   /// Returns a fully themed [InputDecoration] object.
   InputDecoration getDecoration() {
     // Changed from build(BuildContext context) to getDecoration()
     // 1. Determine border and icon color based on validation state
-    Color borderColor;
-    switch (validationState) {
-      case WebbUIValidationState.success:
-        borderColor = webbTheme.colorPalette.success;
-        break;
-      case WebbUIValidationState.error:
-        borderColor = webbTheme.colorPalette.error;
-        break;
-      default:
-        borderColor = webbTheme.colorPalette.neutralDark.withOpacity(0.3);
-    }
+    // Determine colors based on state
+    final Color borderColor = _getBorderColor();
+    // final Color textColor = _getTextColor();
+    final Color labelColor = _getLabelColor();
 
     // 2. Determine content padding based on single-line vs multi-line
     // We use the stored webbTheme context to access theme properties.
+    // Content padding based on single-line vs multi-line
     final verticalPadding =
         webbTheme.spacingGrid.spacing(maxLines! > 1 ? 2 : 1.5);
 
     // 3. Construct and return the standard InputDecoration
+    // Build counter widget if maxLength is provided
+    Widget? counterWidget;
+    if (maxLength != null) {
+      counterWidget = _buildCounterWidget();
+    }
+
     return InputDecoration(
       // Labels and Text
       labelText: label,
-      labelStyle: webbTheme.typography.labelLarge
-          .copyWith(color: webbTheme.colorPalette.neutralDark),
+      labelStyle: webbTheme.typography.labelLarge.copyWith(color: labelColor),
       hintText: hintText,
-      hintStyle: webbTheme.typography.bodyMedium
-          .copyWith(color: webbTheme.colorPalette.neutralDark.withOpacity(0.6)),
-
-      // Helper text and Error text (themed)
-      helperText: helperText,
-      helperStyle: webbTheme.typography.labelMedium
-          .copyWith(color: webbTheme.colorPalette.neutralDark.withOpacity(0.8)),
-      errorText: validationState == WebbUIValidationState.error
-          ? validationMessage
-          : null,
-      errorStyle: webbTheme.typography.labelMedium
-          .copyWith(color: webbTheme.colorPalette.error),
+      hintStyle: webbTheme.typography.bodyMedium.copyWith(
+        color: webbTheme.colorPalette.neutralDark.withOpacity(0.6),
+      ),
 
       // Icons
+      prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
+
+      // Helper and error text
+      helperText: helperText,
+      helperStyle: webbTheme.typography.labelMedium.copyWith(
+        color: webbTheme.colorPalette.neutralDark.withOpacity(0.8),
+      ),
+      errorText: validationState == WebbUIValidationState.error
+          ? validationMessage 
+          : null,
+      errorStyle: webbTheme.typography.labelMedium.copyWith(
+        color: webbTheme.colorPalette.error,
+      ),
+      errorMaxLines: 2,
+
+      // Counter
+      counter: counterWidget,
+      counterText: '', // Hide default counter
 
       // Padding
       contentPadding: EdgeInsets.symmetric(
@@ -80,36 +97,88 @@ class WebbUIInputDecoration {
       ),
 
       // Standard Border (The base border color changes based on validation state)
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(
-            webbTheme.spacingGrid.baseSpacing), // Consistent radius
-        borderSide: BorderSide(color: borderColor, width: 1),
+      // Borders
+      border: _buildBorder(borderColor, 1),
+      enabledBorder: _buildBorder(borderColor, 1),
+      focusedBorder: _buildBorder(
+        webbTheme.interactionStates.focusedBorder,
+        2,
       ),
-
       // Focused Border (Always uses the themed focused border color)
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-        borderSide: BorderSide(
-            color: webbTheme.interactionStates.focusedBorder, width: 2),
+      disabledBorder: _buildBorder(
+        webbTheme.interactionStates.disabledColor,
+        1,
       ),
+      errorBorder: _buildBorder(webbTheme.colorPalette.error, 1),
+      focusedErrorBorder: _buildBorder(webbTheme.colorPalette.error, 2),
 
       // Disabled Border (Always uses the themed disabled color)
-      disabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-        borderSide: BorderSide(
-            color: webbTheme.interactionStates.disabledColor, width: 1),
-      ),
+      // Fill color
+      filled: isDisabled,
+      fillColor: isDisabled
+          ? webbTheme.colorPalette.neutralDark.withOpacity(0.05)
+          : null,
+    );
+  }
 
       // Error Border uses the standard border logic with error color
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-        borderSide: BorderSide(color: webbTheme.colorPalette.error, width: 1),
-      ),
+  Color _getBorderColor() {
+    if (isDisabled) {
+      return webbTheme.interactionStates.disabledColor;
+    }
+
+    switch (validationState) {
+      case WebbUIValidationState.success:
+        return webbTheme.colorPalette.success;
+      case WebbUIValidationState.error:
+        return webbTheme.colorPalette.error;
+      default:
+        return webbTheme.colorPalette.neutralDark.withOpacity(0.3);
+    }
+  }
 
       // Focused Error Border (Error border remains focused on error color)
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-        borderSide: BorderSide(color: webbTheme.colorPalette.error, width: 2),
+  // Color _getTextColor() {
+  //   if (isDisabled) {
+  //     return webbTheme.interactionStates.disabledColor;
+  //   }
+  //   return webbTheme.colorPalette.neutralDark;
+  // }
+
+  Color _getLabelColor() {
+    if (isDisabled) {
+      return webbTheme.interactionStates.disabledColor;
+    }
+    if (isFocused) {
+      return webbTheme.interactionStates.focusedBorder;
+    }
+    return webbTheme.colorPalette.neutralDark;
+  }
+
+  OutlineInputBorder _buildBorder(Color color, double width) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
+      borderSide: BorderSide(color: color, width: width),
+      gapPadding: 0,
+    );
+  }
+
+  Widget _buildCounterWidget() {
+    final bool isOverLimit = currentLength != null &&
+        maxLength != null &&
+        currentLength! > maxLength!;
+    
+    return Padding(
+      padding: EdgeInsets.only(
+        top: webbTheme.spacingGrid.spacing(0.5),
+      ),
+      child: Text(
+        '${currentLength ?? 0}/$maxLength',
+        style: webbTheme.typography.labelMedium.copyWith(
+          color: isOverLimit
+              ? webbTheme.colorPalette.error
+              : webbTheme.colorPalette.neutralDark.withOpacity(0.6),
+        ),
       ),
     );
   }
