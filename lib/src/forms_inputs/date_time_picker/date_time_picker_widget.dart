@@ -1,37 +1,37 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'date_time_picker_definitions.dart';
 import 'date_time_picker_utils.dart';
 
-/// A theme-aware component that allows users to select a date, a time, or both.
 class WebbUIDateTimePicker extends StatefulWidget {
-  /// The initial date and time to be displayed. Defaults to now.
   final DateTime? initialDateTime;
-
-  /// The mode of the picker, determining if it picks date, time, or both.
   final DateTimePickerMode mode;
-
-  /// Callback that returns the selected date and time.
   final ValueChanged<DateTime>? onDateTimeChanged;
-
-  /// The text label displayed above the picker input.
   final String? label;
-
-  /// The earliest allowable date.
+  final String? helperText;
+  final String? errorText;
   final DateTime? firstDate;
-
-  /// The latest allowable date.
   final DateTime? lastDate;
+  final TimeConstraints timeConstraints;
+  final TimeFormat timeFormat;
+  final DateTimeValidationState validationState;
+  final bool disabled;
+  final bool required;
 
   const WebbUIDateTimePicker({
     super.key,
     this.initialDateTime,
     this.onDateTimeChanged,
     this.label,
+    this.helperText,
+    this.errorText,
     this.firstDate,
     this.lastDate,
+    this.timeConstraints = const TimeConstraints(),
+    this.timeFormat = TimeFormat.hhmm,
+    this.validationState = DateTimeValidationState.none,
+    this.disabled = false,
+    this.required = false,
     this.mode = DateTimePickerMode.dateTime,
   });
 
@@ -41,6 +41,7 @@ class WebbUIDateTimePicker extends StatefulWidget {
 
 class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
   late DateTime? _selectedDateTime;
+  bool _hasBeenTouched = false;
 
   @override
   void initState() {
@@ -48,25 +49,31 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
     _selectedDateTime = widget.initialDateTime;
   }
 
+  @override
+  void didUpdateWidget(WebbUIDateTimePicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialDateTime != oldWidget.initialDateTime) {
+      setState(() {
+        _selectedDateTime = widget.initialDateTime;
+      });
+    }
+  }
+
   String _getFormattedValue() {
     if (_selectedDateTime == null) {
-      switch (widget.mode) {
-        case DateTimePickerMode.date:
-          return 'Select Date';
-        case DateTimePickerMode.time:
-          return 'Select Time';
-        case DateTimePickerMode.dateTime:
-          return 'Select Date & Time';
-      }
+      return _getPlaceholderText();
     }
+    return _selectedDateTime!.formattedDisplay(widget.mode, widget.timeFormat);
+  }
 
+  String _getPlaceholderText() {
     switch (widget.mode) {
       case DateTimePickerMode.date:
-        return _selectedDateTime!.formattedDate;
+        return 'Select Date';
       case DateTimePickerMode.time:
-        return _selectedDateTime!.formattedTime;
+        return 'Select Time';
       case DateTimePickerMode.dateTime:
-        return _selectedDateTime!.formattedDateTime;
+        return 'Select Date & Time';
     }
   }
 
@@ -81,77 +88,112 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
     }
   }
 
-  // --- Picker Logic ---
-
-  Future<void> _showPicker(BuildContext context) async {
-    // 1. Get the theme and current selection BEFORE any async gaps.
+  Color _getBorderColor(BuildContext context) {
     final webbTheme = context;
-    final currentSelection =
-        _selectedDateTime ?? widget.initialDateTime ?? DateTime.now();
+    
+    if (widget.disabled) {
+      return webbTheme.interactionStates.disabledColor;
+    }
 
-    DateTime datePart = currentSelection; // Initialize datePart safely
-    TimeOfDay timePart = TimeOfDay.fromDateTime(
-      currentSelection,
-    ); // Initialize timePart safely
+    if (widget.validationState == DateTimeValidationState.error ||
+        (widget.required && _hasBeenTouched && _selectedDateTime == null)) {
+      return webbTheme.colorPalette.error;
+    }
 
-    // Helper to apply consistent theming to both pickers' builders.
-    Widget pickerThemeBuilder(Widget child) {
-      return Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: Theme.of(context).brightness == Brightness.light
-              ? ColorScheme.light(
-                  primary: webbTheme.colorPalette.primary,
-                  onPrimary: webbTheme.colorPalette.neutralLight,
-                  onSurface: webbTheme.colorPalette.neutralDark,
-                )
-              : ColorScheme.dark(
-                  primary: webbTheme.colorPalette.primary,
-                  onPrimary: webbTheme.colorPalette.neutralDark,
-                  surface: webbTheme.colorPalette.neutralDark,
-                  onSurface: webbTheme.colorPalette.neutralLight,
-                ),
-        ),
-        child: child,
+    if (widget.validationState == DateTimeValidationState.success) {
+      return webbTheme.colorPalette.success;
+    }
+
+    return webbTheme.colorPalette.neutralDark.withOpacity(0.3);
+  }
+
+  Widget? _buildSuffixIcon(BuildContext context) {
+    final webbTheme = context;
+    
+    if (widget.disabled) {
+      return Icon(
+        _getIcon(),
+        color: webbTheme.interactionStates.disabledColor,
+        size: webbTheme.iconTheme.mediumSize,
       );
     }
 
-    // 1. Pick Date (if required)
-    if (widget.mode == DateTimePickerMode.date ||
+    if (widget.validationState == DateTimeValidationState.error ||
+        (widget.required && _hasBeenTouched && _selectedDateTime == null)) {
+      return Icon(
+        Icons.error_outline,
+        color: webbTheme.colorPalette.error,
+        size: webbTheme.iconTheme.mediumSize,
+      );
+    }
+
+    if (widget.validationState == DateTimeValidationState.success) {
+      return Icon(
+        Icons.check_circle,
+        color: webbTheme.colorPalette.success,
+        size: webbTheme.iconTheme.mediumSize,
+      );
+    }
+
+    return Icon(
+      _getIcon(),
+      color: webbTheme.colorPalette.primary,
+      size: webbTheme.iconTheme.mediumSize,
+    );
+  }
+
+  Future<void> _showPicker(BuildContext context) async {
+    if (widget.disabled) return;
+
+    setState(() => _hasBeenTouched = true);
+
+    final currentSelection = _selectedDateTime ?? DateTime.now();
+
+    DateTime datePart = currentSelection;
+    TimeOfDay timePart = TimeOfDay.fromDateTime(currentSelection);
+
+    // Date Picker
+    if (widget.mode == DateTimePickerMode.date || 
         widget.mode == DateTimePickerMode.dateTime) {
       final pickedDate = await showDatePicker(
         context: context,
         initialDate: currentSelection,
         firstDate: widget.firstDate ?? DateTime(1900),
         lastDate: widget.lastDate ?? DateTime(2101),
-        builder: (context, child) =>
-            pickerThemeBuilder(child!), // Use local helper
+        builder: (dialogContext, child) =>
+            _buildThemedPicker(dialogContext, child!),
       );
 
-      // Check mounted state before processing the result
       if (!mounted) return;
-      if (pickedDate == null) return; // User cancelled
+      if (pickedDate == null) return;
 
       datePart = pickedDate;
     }
 
-    // 2. Pick Time (if required)
-    if (widget.mode == DateTimePickerMode.time ||
+    // Time Picker
+    if (widget.mode == DateTimePickerMode.time || 
         widget.mode == DateTimePickerMode.dateTime) {
       final pickedTime = await showTimePicker(
-        context: context, // This is now a safe use of context
-        initialTime: TimeOfDay.fromDateTime(currentSelection),
-        builder: (context, child) =>
-            pickerThemeBuilder(child!), // Use local helper
+        context: context,
+        initialTime: timePart,
+        builder: (dialogContext, child) =>
+            _buildThemedPicker(dialogContext, child!),
       );
 
-      // Check mounted state before processing the result
       if (!mounted) return;
-      if (pickedTime == null) return; // User cancelled
+      if (pickedTime == null) return;
+
+      // Validate time constraints
+      if (!pickedTime.isWithinConstraints(widget.timeConstraints)) {
+        if (mounted) {
+          _showTimeConstraintError(context);
+        }
+        return;
+      }
 
       timePart = pickedTime;
     }
 
-    // 3. Combine and update state
     final finalDateTime = DateTime(
       datePart.year,
       datePart.month,
@@ -160,26 +202,98 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
       timePart.minute,
     );
 
-    setState(() {
-      _selectedDateTime = finalDateTime;
-    });
+    // Validate date range
+    if (!finalDateTime.isWithinRange(widget.firstDate, widget.lastDate)) {
+      if (mounted) {
+        _showDateConstraintError(context);
+      }
+      return;
+    }
 
-    widget.onDateTimeChanged?.call(finalDateTime);
+    if (mounted) {
+      setState(() => _selectedDateTime = finalDateTime);
+      widget.onDateTimeChanged?.call(finalDateTime);
+    }
+  }
+
+  Widget _buildThemedPicker(BuildContext dialogContext, Widget child) {
+    final dialogWebbTheme = dialogContext;
+    return Theme(
+      data: Theme.of(dialogContext).copyWith(
+        colorScheme: Theme.of(dialogContext).colorScheme.copyWith(
+              primary: dialogWebbTheme.colorPalette.primary,
+              onPrimary: dialogWebbTheme.colorPalette.onPrimary,
+              surface: dialogWebbTheme.colorPalette.surface,
+              onSurface: dialogWebbTheme.colorPalette.onSurface,
+            ),
+      ),
+      child: child,
+    );
+  }
+
+  void _showTimeConstraintError(BuildContext context) {
+    final webbTheme = context;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Selected time is outside allowed range',
+          style: webbTheme.typography.bodyMedium.copyWith(
+            color: webbTheme.colorPalette.onSurface,
+          ),
+        ),
+        backgroundColor: webbTheme.colorPalette.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showDateConstraintError(BuildContext context) {
+    final webbTheme = context;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Selected date is outside allowed range',
+          style: webbTheme.typography.bodyMedium.copyWith(
+            color: webbTheme.colorPalette.onSurface,
+          ),
+        ),
+        backgroundColor: webbTheme.colorPalette.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final webbTheme = context;
+    final borderColor = _getBorderColor(context);
+    final suffixIcon = _buildSuffixIcon(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Label
         if (widget.label != null)
           Padding(
             padding: EdgeInsets.only(bottom: webbTheme.spacingGrid.spacing(1)),
-            child: Text(widget.label!, style: webbTheme.typography.labelMedium),
+            child: Row(
+              children: [
+                Text(widget.label!, style: webbTheme.typography.labelMedium),
+                if (widget.required)
+                  Padding(
+                    padding: EdgeInsets.only(
+                        left: webbTheme.spacingGrid.spacing(0.5)),
+                    child: Text('*',
+                        style: webbTheme.typography.labelMedium.copyWith(
+                          color: webbTheme.colorPalette.error,
+                        )),
+                  ),
+              ],
+            ),
           ),
+
+        // Picker Input
         InkWell(
           onTap: () => _showPicker(context),
           borderRadius:
@@ -187,36 +301,54 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
           child: Container(
             padding: EdgeInsets.symmetric(
               horizontal: webbTheme.spacingGrid.spacing(2),
-              vertical: webbTheme.spacingGrid.spacing(1),
+              vertical: webbTheme.spacingGrid.spacing(1.5),
             ),
             decoration: BoxDecoration(
-              color: webbTheme.colorPalette.neutralLight.withOpacity(0.1),
+              color: widget.disabled
+                  ? webbTheme.colorPalette.neutralDark.withOpacity(0.05)
+                  : webbTheme.colorPalette.surface,
               borderRadius:
                   BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-              border: Border.all(
-                color: webbTheme.colorPalette.neutralDark.withOpacity(0.2),
-              ),
+              border: Border.all(color: borderColor, width: 1.5),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  _getFormattedValue(),
-                  style: webbTheme.typography.bodyMedium.copyWith(
-                    color: _selectedDateTime == null
-                        ? webbTheme.colorPalette.neutralDark.withOpacity(0.5)
-                        : webbTheme.colorPalette.neutralDark,
+                Expanded(
+                  child: Text(
+                    _getFormattedValue(),
+                    style: webbTheme.typography.bodyMedium.copyWith(
+                      color: _selectedDateTime == null || widget.disabled
+                          ? webbTheme.colorPalette.neutralDark.withOpacity(0.5)
+                          : webbTheme.colorPalette.neutralDark,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Icon(
-                  _getIcon(),
-                  color: webbTheme.colorPalette.primary,
-                  size: webbTheme.iconTheme.mediumSize,
-                ),
+                if (suffixIcon != null)
+                  Padding(
+                    padding:
+                        EdgeInsets.only(left: webbTheme.spacingGrid.spacing(1)),
+                    child: suffixIcon,
+                  ),
               ],
             ),
           ),
         ),
+
+        // Helper Text & Error Text
+        if (widget.helperText != null || widget.errorText != null)
+          Padding(
+            padding: EdgeInsets.only(top: webbTheme.spacingGrid.spacing(0.5)),
+            child: Text(
+              widget.errorText ?? widget.helperText!,
+              style: webbTheme.typography.labelMedium.copyWith(
+                color: widget.errorText != null
+                    ? webbTheme.colorPalette.error
+                    : webbTheme.colorPalette.neutralDark.withOpacity(0.6),
+              ),
+            ),
+          ),
       ],
     );
   }
