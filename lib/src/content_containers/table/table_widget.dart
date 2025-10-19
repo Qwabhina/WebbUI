@@ -35,6 +35,7 @@ class WebbUITable<T> extends StatelessWidget {
   /// Custom widget to display below the table body, replacing the default
   /// pagination controls if [isPaginated] is true.
   final Widget? customFooter;
+  final double? maxHeight;
 
   const WebbUITable({
     super.key,
@@ -46,12 +47,14 @@ class WebbUITable<T> extends StatelessWidget {
     this.header,
     this.isRowSelectionEnabled = true,
     this.customFooter,
+    this.maxHeight,
   });
 
   @override
   Widget build(BuildContext context) {
     final webbTheme = context;
     final screenHeight = MediaQuery.of(context).size.height;
+    final effectiveMaxHeight = maxHeight ?? screenHeight * 0.6;
 
     // Use ChangeNotifierProvider to initialize and manage the table state.
     return ChangeNotifierProvider<TableStateManager<T>>(
@@ -66,6 +69,7 @@ class WebbUITable<T> extends StatelessWidget {
       builder: (context, child) {
         // We use Builder to ensure we can access the TableStateManager via context.watch
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // --- Custom Header (e.g., global filter, title) ---
             if (header != null)
@@ -75,30 +79,36 @@ class WebbUITable<T> extends StatelessWidget {
               ),
 
             // --- Table Structure ---
-            // Note: We use a fixed height here for demonstration. In a real app,
-            // the parent widget must constrain the height for the Expanded in the body to work.
+            // Table container with proper constraints
             Container(
-              constraints: BoxConstraints(maxHeight: screenHeight * 0.7),
+              constraints: BoxConstraints(
+                maxHeight: effectiveMaxHeight,
+                minHeight: 200, // Minimum height for empty states
+              ),
               decoration: BoxDecoration(
-                color: webbTheme.colorPalette.neutralLight,
-                borderRadius: BorderRadius.circular(8.0),
+                color: webbTheme.colorPalette.surface,
+                borderRadius:
+                    BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
                 boxShadow: webbTheme.elevation.getShadows(1),
+                border: Border.all(
+                  color: webbTheme.colorPalette.neutralDark.withOpacity(0.1),
+                  width: 1,
+                ),
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1. Header (Column Titles, Sorting, Filtering)
+                  // Fixed header
                   WebbUITableHeader<T>(),
 
-                  // 2. Body (Rows, Cells, Editing, Scrolling)
-                  Flexible(
+                  // Scrollable body
+                  Expanded(
                     child: WebbUITableBody<T>(),
                   ),
                 ],
               ),
             ),
 
-            // --- Footer (Pagination, Aggregate Values) ---
+            // Footer
             if (isPaginated || customFooter != null)
               Padding(
                 padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
