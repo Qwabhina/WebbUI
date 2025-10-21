@@ -42,11 +42,19 @@ class WebbUIDateTimePicker extends StatefulWidget {
 class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
   late DateTime? _selectedDateTime;
   bool _hasBeenTouched = false;
+  late ScaffoldMessengerState _scaffoldMessenger;
 
   @override
   void initState() {
     super.initState();
     _selectedDateTime = widget.initialDateTime;
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
   }
 
   @override
@@ -142,8 +150,8 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
     );
   }
 
-  Future<void> _showPicker(BuildContext context) async {
-    if (widget.disabled) return;
+  Future<void> _showPicker() async {
+    if (widget.disabled || !mounted) return;
 
     setState(() => _hasBeenTouched = true);
 
@@ -185,9 +193,7 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
 
       // Validate time constraints
       if (!pickedTime.isWithinConstraints(widget.timeConstraints)) {
-        if (mounted) {
-          _showTimeConstraintError(context);
-        }
+        _showTimeConstraintError();
         return;
       }
 
@@ -204,9 +210,7 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
 
     // Validate date range
     if (!finalDateTime.isWithinRange(widget.firstDate, widget.lastDate)) {
-      if (mounted) {
-        _showDateConstraintError(context);
-      }
+      _showDateConstraintError();
       return;
     }
 
@@ -231,9 +235,11 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
     );
   }
 
-  void _showTimeConstraintError(BuildContext context) {
+  void _showTimeConstraintError() {
+    if (!mounted) return;
+    
     final webbTheme = context;
-    ScaffoldMessenger.of(context).showSnackBar(
+    _scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(
           'Selected time is outside allowed range',
@@ -247,9 +253,11 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
     );
   }
 
-  void _showDateConstraintError(BuildContext context) {
+  void _showDateConstraintError() {
+    if (!mounted) return;
+    
     final webbTheme = context;
-    ScaffoldMessenger.of(context).showSnackBar(
+    _scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(
           'Selected date is outside allowed range',
@@ -295,7 +303,7 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
 
         // Picker Input
         InkWell(
-          onTap: () => _showPicker(context),
+          onTap: _showPicker, // Removed context parameter
           borderRadius:
               BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
           child: Container(
