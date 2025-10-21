@@ -35,8 +35,7 @@ class WebbUIButton extends StatelessWidget {
     final webbTheme = context;
     final bool isMobile =
         MediaQuery.of(context).size.width < WebbUIBreakpoints.mobile;
-    final double minHeight =
-        webbTheme.accessibility.minTouchTargetSize; // 48.0 for touch
+    final double minHeight = webbTheme.accessibility.minTouchTargetSize;
     final double paddingHorizontal =
         webbTheme.spacingGrid.spacing(isMobile ? 3 : 2);
 
@@ -90,96 +89,86 @@ class WebbUIButton extends StatelessWidget {
 
     final scaledIconTheme = webbTheme.iconTheme;
 
+    // FIX: Calculate proper overlay colors for transparent backgrounds
+    Color getOverlayColor(Set<WidgetState> states) {
+      if (states.contains(WidgetState.pressed)) {
+        // For transparent backgrounds, use the primary color with opacity
+        if (backgroundColor == Colors.transparent) {
+          return webbTheme.colorPalette.primary.withOpacity(0.12);
+        }
+        return webbTheme.interactionStates.pressedOverlay;
+      }
+      if (states.contains(WidgetState.hovered)) {
+        // For transparent backgrounds, use the primary color with opacity
+        if (backgroundColor == Colors.transparent) {
+          return webbTheme.colorPalette.primary.withOpacity(0.08);
+        }
+        return webbTheme.interactionStates.hoverOverlay;
+      }
+      return Colors.transparent;
+    }
+
     final ButtonStyle style = ButtonStyle(
-      // Background Color
-      backgroundColor: WidgetStateProperty.resolveWith<Color?>(
-        (Set<WidgetState> states) {
-          if (states.contains(WidgetState.disabled)) {
-            // We already set the disabled background above, so we return it.
-            return backgroundColor;
-          }
-          return backgroundColor; // Use the variant-specific color
-        },
-      ),
-
-      // Foreground Color (Text/Icon)
-      foregroundColor: WidgetStateProperty.all<Color?>(foregroundColor),
-
-      // Overlay Color (This is the fix for hover/pressed)
-      overlayColor: WidgetStateProperty.resolveWith<Color?>(
-        (Set<WidgetState> states) {
-          if (states.contains(WidgetState.pressed)) {
-            return webbTheme.interactionStates.pressedOverlay;
-          }
-          if (states.contains(WidgetState.hovered)) {
-            return webbTheme.interactionStates.hoverOverlay;
-          }
-          return null; // Transparent overlay by default
-        },
-      ),
-
-      // Padding
+      backgroundColor: WidgetStateProperty.all<Color>(backgroundColor),
+      foregroundColor: WidgetStateProperty.all<Color>(foregroundColor),
+      overlayColor: WidgetStateProperty.resolveWith<Color>(getOverlayColor),
       padding: WidgetStateProperty.all<EdgeInsetsGeometry>(
         EdgeInsets.symmetric(
-            horizontal: paddingHorizontal,
-            vertical: webbTheme.spacingGrid.spacing(1)),
+          horizontal: paddingHorizontal,
+          vertical: webbTheme.spacingGrid.spacing(1),
+        ),
       ),
-
-      // Shape/Border
       shape: WidgetStateProperty.all<OutlinedBorder>(
         RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
           side: borderSide ?? BorderSide.none,
         ),
       ),
-
-      // Elevation (use the elevation token)
       elevation: WidgetStateProperty.resolveWith<double?>(
         (Set<WidgetState> states) {
-          if (states.contains(WidgetState.disabled)) {
-            return 0;
-          }
-          // Using the blurRadius as a simple elevation proxy
-          return webbTheme.elevation.getShadows(1).first.blurRadius;
+          if (states.contains(WidgetState.disabled)) return 0;
+          return webbTheme.elevation.getShadows(1).first.blurRadius / 4;
         },
       ),
-
-      // Minimum size to enforce minHeight (accessibility touch target)
       minimumSize: WidgetStateProperty.all<Size>(Size(0, minHeight)),
     );
 
-    return SizedBox(
-      width: fullWidth ? double.infinity : null,
-      height: minHeight,
-      child: ElevatedButton(
-        onPressed: disabled || isLoading ? null : onPressed,
-        style: style, 
-        child: isLoading
-            ? Semantics(
-                label: 'Loading', // Screen reader support
-                child: SizedBox(
+    return Semantics(
+      button: true,
+      enabled: !disabled && !isLoading,
+      label: isLoading ? '$label (Loading)' : label,
+      child: SizedBox(
+        width: fullWidth ? double.infinity : null,
+        height: minHeight,
+        child: ElevatedButton(
+          onPressed: disabled || isLoading ? null : onPressed,
+          style: style,
+          child: isLoading
+              ? SizedBox(
                   width: scaledIconTheme.mediumSize,
                   height: scaledIconTheme.mediumSize,
                   child: CircularProgressIndicator(
                     color: foregroundColor,
                     strokeWidth: 2,
                   ),
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: scaledIconTheme.mediumSize),
-                    SizedBox(width: webbTheme.spacingGrid.spacing(1)),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: scaledIconTheme.mediumSize),
+                      SizedBox(width: webbTheme.spacingGrid.spacing(1)),
+                    ],
+                    Text(
+                      label,
+                      style: webbTheme.typography.labelLarge.copyWith(
+                        color: foregroundColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
-                  Text(
-                    label,
-                    style: webbTheme.typography.labelLarge
-                        .copyWith(color: foregroundColor),
-                  ),
-                ],
-              ),
+                ),
+        ),
       ),
     );
   }
