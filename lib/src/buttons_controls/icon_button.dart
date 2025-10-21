@@ -4,54 +4,79 @@ import 'package:webb_ui/src/theme.dart';
 class WebbUIIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onPressed;
-  final String? label;
+  final String? tooltip;
   final bool disabled;
-  final double? size;
+  final String? size; // 'small', 'medium', 'large'
+  final Color? backgroundColor;
 
   const WebbUIIconButton({
     super.key,
     required this.icon,
     this.onPressed,
-    this.label,
+    this.tooltip,
     this.disabled = false,
-    this.size,
+    this.size = 'medium',
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final webbTheme = context;
-    final double iconSize = size ?? context.iconTheme.mediumSize;
-    final Color color = disabled
+    final double iconSize = _getIconSize(size, webbTheme);
+    final double buttonSize = _getButtonSize(size, webbTheme);
+
+    final Color iconColor = disabled
         ? webbTheme.interactionStates.disabledColor
-        : webbTheme.colorPalette.primary;
+        : (backgroundColor != null
+            ? Colors.white
+            : webbTheme.colorPalette.primary);
 
-    // Calculate proper padding to maintain touch target
-    final double minSize = webbTheme.accessibility.minTouchTargetSize;
-    final double padding = (minSize - iconSize) / 2;
-
-    Widget button = IconButton(
-      icon: Icon(icon, size: iconSize, color: color),
-      onPressed: disabled ? null : onPressed,
-      tooltip: label,
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.transparent,
-        disabledBackgroundColor: 
-            webbTheme.interactionStates.disabledColor.withOpacity(0.1),
-        highlightColor: webbTheme.interactionStates.pressedOverlay,
-        hoverColor: webbTheme.interactionStates.hoverOverlay,
-        focusColor: webbTheme.interactionStates.focusedBorder.withOpacity(0.2),
-        padding:
-            EdgeInsets.all(padding.clamp(4, 12)), // Ensure reasonable bounds
-        minimumSize: Size(minSize, minSize),
+    Widget button = SizedBox(
+      width: buttonSize,
+      height: buttonSize,
+      child: ElevatedButton(
+        onPressed: disabled ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          backgroundColor: backgroundColor,
+          foregroundColor: iconColor,
+          shape: const CircleBorder(),
+          elevation: 0,
+          disabledBackgroundColor:
+              webbTheme.interactionStates.disabledColor.withOpacity(0.1),
+          disabledForegroundColor: webbTheme.interactionStates.disabledColor,
+        ),
+        child: Icon(icon, size: iconSize),
       ),
     );
 
-    if (label != null) {
-      return Tooltip(
-        message: label!,
-        child: button,
-      );
+    if (tooltip != null && !disabled) {
+      button = Tooltip(message: tooltip!, child: button);
     }
+
     return button;
+  }
+
+  double _getIconSize(String? size, BuildContext theme) {
+    switch (size) {
+      case 'small':
+        return theme.iconTheme.smallSize;
+      case 'large':
+        return theme.iconTheme.largeSize;
+      default:
+        return theme.iconTheme.mediumSize;
+    }
+  }
+
+  double _getButtonSize(String? size, BuildContext theme) {
+    final double minSize = theme.accessibility.minTouchTargetSize;
+    switch (size) {
+      case 'small':
+        return minSize;
+      case 'large':
+        return minSize * 1.5;
+      default:
+        return minSize * 1.25;
+    }
   }
 }
