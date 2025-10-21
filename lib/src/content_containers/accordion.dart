@@ -9,7 +9,8 @@ class WebbUIAccordion extends StatefulWidget {
   final String title;
   final Widget content;
   final bool initiallyExpanded;
-  final ValueChanged<bool>? onExpansionChanged; // Add callback
+  final ValueChanged<bool>? onExpansionChanged;
+  final bool disabled;
 
   const WebbUIAccordion({
     super.key,
@@ -17,6 +18,7 @@ class WebbUIAccordion extends StatefulWidget {
     required this.content,
     this.initiallyExpanded = false,
     this.onExpansionChanged,
+    this.disabled = false,
   });
 
   @override
@@ -27,6 +29,7 @@ class _WebbUIAccordionState extends State<WebbUIAccordion>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _rotationAnimation;
+  late Animation<double> _heightAnimation;
   late bool _isExpanded;
 
   @override
@@ -37,10 +40,22 @@ class _WebbUIAccordionState extends State<WebbUIAccordion>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+    
     _rotationAnimation = Tween<double>(
       begin: 0,
-      end: 0.5, // 180 degrees for expand_more -> expand_less
-    ).animate(_controller);
+      end: 0.5,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
+
+    _heightAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
 
     if (_isExpanded) {
       _controller.value = 1.0;
@@ -48,6 +63,8 @@ class _WebbUIAccordionState extends State<WebbUIAccordion>
   }
 
   void _toggleExpanded() {
+    if (widget.disabled) return;
+    
     setState(() {
       _isExpanded = !_isExpanded;
       if (_isExpanded) {
@@ -63,64 +80,77 @@ class _WebbUIAccordionState extends State<WebbUIAccordion>
   Widget build(BuildContext context) {
     final webbTheme = context;
     
-    return WebbUICard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Enhanced header with better interaction states
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _toggleExpanded,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(webbTheme.spacingGrid.baseSpacing),
-                topRight: Radius.circular(webbTheme.spacingGrid.baseSpacing),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: webbTheme.spacingGrid.spacing(2),
-                  vertical: webbTheme.spacingGrid.spacing(1.5),
+    return Semantics(
+      button: true,
+      expanded: _isExpanded,
+      enabled: !widget.disabled,
+      child: WebbUICard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _toggleExpanded,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(webbTheme.spacingGrid.baseSpacing),
+                  topRight: Radius.circular(webbTheme.spacingGrid.baseSpacing),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.title,
-                        style: webbTheme.typography.headlineMedium.copyWith(
-                          color: webbTheme.colorPalette.neutralDark,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: webbTheme.spacingGrid.spacing(2),
+                    vertical: webbTheme.spacingGrid.spacing(1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: webbTheme.typography.headlineMedium.copyWith(
+                            color: widget.disabled
+                                ? webbTheme.interactionStates.disabledColor
+                                : webbTheme.colorPalette.neutralDark,
+                          ),
                         ),
                       ),
-                    ),
-                    RotationTransition(
-                      turns: _rotationAnimation,
-                      child: Icon(
-                        Icons.expand_more, // Always start with expand_more
-                        color: webbTheme.colorPalette.neutralDark,
+                      RotationTransition(
+                        turns: _rotationAnimation,
+                        child: Icon(
+                          Icons.expand_more,
+                          color: widget.disabled
+                              ? webbTheme.interactionStates.disabledColor
+                              : webbTheme.colorPalette.neutralDark,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: _isExpanded
-                ? Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      webbTheme.spacingGrid.spacing(2),
-                      0,
-                      webbTheme.spacingGrid.spacing(2),
-                      webbTheme.spacingGrid.spacing(2),
-                    ),
-                    child: widget.content,
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
+            
+            AnimatedBuilder(
+              animation: _heightAnimation,
+              builder: (context, child) {
+                return ClipRect(
+                  child: Align(
+                    heightFactor: _heightAnimation.value,
+                    child: child,
+                  ),
+                );
+              },
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  webbTheme.spacingGrid.spacing(2),
+                  0,
+                  webbTheme.spacingGrid.spacing(2),
+                  webbTheme.spacingGrid.spacing(2),
+                ),
+                child: widget.content,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
