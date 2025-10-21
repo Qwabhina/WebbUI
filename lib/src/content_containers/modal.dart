@@ -20,7 +20,7 @@ class WebbUIModal extends StatelessWidget {
   final String? title;
   final List<Widget>? actions;
   final WebbUIModalType type;
-  final BoxConstraints? customConstraints; // For custom type
+  final BoxConstraints? customConstraints;
   final bool showCloseButton;
   final bool barrierDismissible;
   final Color? barrierColor;
@@ -85,7 +85,10 @@ class WebbUIModal extends StatelessWidget {
     switch (type) {
       case WebbUIModalType.custom:
         return customConstraints ??
-            const BoxConstraints(maxWidth: 500, maxHeight: 600);
+            BoxConstraints(
+              maxWidth: maxWidth,
+              maxHeight: maxHeight,
+            );
       case WebbUIModalType.mini:
         return const BoxConstraints(
             minWidth: 300, maxWidth: 300, minHeight: 200, maxHeight: 200);
@@ -139,39 +142,27 @@ class WebbUIModal extends StatelessWidget {
     final webbTheme = context;
     final bool isMobile =
         MediaQuery.of(context).size.width < WebbUIBreakpoints.mobile;
-
-    // Fixed-size modals (mini, small, medium, large) and scrollable/fullscreen
-    // need the content area to expand to fill the defined BoxConstraints.
-    final bool hasFixedDimensions = type.index >= WebbUIModalType.mini.index &&
-        type.index <= WebbUIModalType.large.index;
-
-    final bool shouldExpandContent = hasFixedDimensions ||
-        type == WebbUIModalType.scrollable ||
-        type == WebbUIModalType.fullscreen;
+    final bool isFullscreen = type == WebbUIModalType.fullscreen;
 
     return Dialog(
-      // Ensure zero padding for mobile/fullscreen to truly fill the viewport
-      insetPadding: isMobile || type == WebbUIModalType.fullscreen
+      insetPadding: isMobile || isFullscreen
           ? EdgeInsets.zero
-          // Generous padding for desktop/tablet views
           : EdgeInsets.all(webbTheme.spacingGrid.spacing(3)),
-
       child: ConstrainedBox(
         constraints: _getConstraints(context),
         child: Container(
-          // Apply background color, themed border radius, and elevation
           decoration: BoxDecoration(
             color: webbTheme.colorPalette.neutralLight,
-            borderRadius: type == WebbUIModalType.fullscreen
+            borderRadius: isFullscreen
                 ? BorderRadius.zero
                 : BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
             boxShadow: webbTheme.elevation.getShadows(3),
           ),
           child: Column(
-            mainAxisSize:
-                shouldExpandContent ? MainAxisSize.max : MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Header Section
               if (title != null || showCloseButton)
                 Padding(
                   padding: EdgeInsets.fromLTRB(
@@ -184,22 +175,15 @@ class WebbUIModal extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       if (title != null)
-                        Flexible(
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              right: webbTheme.spacingGrid.spacing(1),
+                        Expanded(
+                          child: Text(
+                            title!,
+                            style: webbTheme.typography.headlineMedium.copyWith(
+                              color: webbTheme.colorPalette.neutralDark,
                             ),
-                            child: Text(
-                              title!,
-                              style:
-                                  webbTheme.typography.headlineMedium.copyWith(
-                                color: webbTheme.colorPalette.neutralDark,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      const Spacer(),
                       if (showCloseButton)
                         IconButton(
                           icon: Icon(
@@ -210,35 +194,30 @@ class WebbUIModal extends StatelessWidget {
                           ),
                           onPressed: () => Navigator.of(context).pop(),
                           tooltip: 'Close',
-                          constraints: BoxConstraints.tightFor(
-                            width: webbTheme.accessibility.minTouchTargetSize,
-                            height: webbTheme.accessibility.minTouchTargetSize,
-                          ),
-                          padding: EdgeInsets.zero,
                         ),
                     ],
                   ),
                 ),
 
-              // Optional Divider beneath the title
               if (title != null)
                 Divider(
                   height: 1,
                   color: webbTheme.colorPalette.neutralDark.withOpacity(0.1),
                 ),
 
-              // --- CONTENT SECTION ---
-              // If the content should expand (fixed-size, scrollable, fullscreen types)
-              if (shouldExpandContent)
-                Expanded(
-                  child: _buildContent(webbTheme),
-                )
-              // If the content should shrink-wrap (fixed type, custom with unbound height)
+              // Content Section - FIXED: Use Expanded only for types that need it
+              if (type == WebbUIModalType.scrollable ||
+                  type == WebbUIModalType.fullscreen)
+                Expanded(child: _buildContent(webbTheme))
               else
                 _buildContent(webbTheme),
 
-              // --- ACTION SECTION ---
-              if (actions != null && actions!.isNotEmpty)
+              // Actions Section
+              if (actions != null && actions!.isNotEmpty) ...[
+                Divider(
+                  height: 1,
+                  color: webbTheme.colorPalette.neutralDark.withOpacity(0.1),
+                ),
                 Padding(
                   padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
                   child: Row(
@@ -247,6 +226,7 @@ class WebbUIModal extends StatelessWidget {
                     children: actions!,
                   ),
                 ),
+              ],
             ],
           ),
         ),
