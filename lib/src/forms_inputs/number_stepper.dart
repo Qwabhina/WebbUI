@@ -230,7 +230,7 @@ class _WebbUINumberStepperState extends State<WebbUINumberStepper> {
       icon: icon,
       onPressed: onPressed,
       disabled: !isEnabled,
-      label: icon == Icons.add ? 'Increment' : 'Decrement',
+      tooltip: icon == Icons.add ? 'Increment' : 'Decrement',
     );
   }
 
