@@ -69,19 +69,13 @@ class _WebbUITextFieldState extends State<WebbUITextField> {
     super.initState();
     _focusNode = widget.focusNode ?? FocusNode();
     _controller = widget.controller ?? TextEditingController();
-
     _focusNode.addListener(_handleFocusChange);
   }
 
   @override
   void dispose() {
-    // Only dispose if we created the focus node and controller
-    if (widget.focusNode == null) {
-      _focusNode.dispose();
-    }
-    if (widget.controller == null) {
-      _controller.dispose();
-    }
+    if (widget.focusNode == null) _focusNode.dispose();
+    if (widget.controller == null) _controller.dispose();
     super.dispose();
   }
 
@@ -91,11 +85,10 @@ class _WebbUITextFieldState extends State<WebbUITextField> {
     });
   }
 
-  Widget? _buildSuffixIcon(BuildContext webbTheme) {
-    if (widget.validationState == WebbUIValidationState.none) {
-      return null;
-    }
+  Widget? _buildSuffixIcon(BuildContext context) {
+    if (widget.validationState == WebbUIValidationState.none) return null;
 
+    final webbTheme = context;
     final Color iconColor =
         widget.validationState == WebbUIValidationState.success
         ? webbTheme.colorPalette.success
@@ -115,11 +108,10 @@ class _WebbUITextFieldState extends State<WebbUITextField> {
 
   @override
   Widget build(BuildContext context) {
-    final webbTheme = context;
-    final suffixIcon = _buildSuffixIcon(webbTheme);
+    final suffixIcon = _buildSuffixIcon(context);
 
-    final decoration = WebbUIInputDecoration(
-      webbTheme: webbTheme,
+    final decoration = WebbUIInputDecoration.create(
+      context: context,
       label: widget.label,
       hintText: widget.hintText,
       helperText: widget.helperText,
@@ -127,12 +119,12 @@ class _WebbUITextFieldState extends State<WebbUITextField> {
       suffixIcon: suffixIcon,
       validationState: widget.validationState,
       validationMessage: widget.validationMessage,
-      maxLines: widget.maxLines,
+      maxLines: widget.maxLines ?? 1,
       maxLength: widget.maxLength,
       currentLength: _controller.text.length,
       isFocused: _hasFocus,
       isDisabled: widget.disabled,
-    ).getDecoration();
+    );
 
     return TextFormField(
       controller: _controller,
@@ -151,10 +143,10 @@ class _WebbUITextFieldState extends State<WebbUITextField> {
       enableInteractiveSelection: widget.enableInteractiveSelection,
       restorationId: widget.restorationId,
       decoration: decoration,
-      style: webbTheme.typography.bodyMedium.copyWith(
+      style: context.typography.bodyMedium.copyWith(
         color: widget.disabled
-            ? webbTheme.interactionStates.disabledColor
-            : webbTheme.colorPalette.neutralDark,
+            ? context.interactionStates.disabledColor
+            : context.colorPalette.neutralDark,
       ),
     );
   }
