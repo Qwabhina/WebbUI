@@ -40,20 +40,23 @@ class WebbUITypography extends ThemeExtension<WebbUITypography> {
     bodyMedium:
         TextStyle(fontSize: 14, fontWeight: FontWeight.normal, height: 1.43),
     labelLarge:
-        TextStyle(fontSize: 14, fontWeight: FontWeight.w400, height: 1.43),
+        TextStyle(fontSize: 14, fontWeight: FontWeight.w500, height: 1.43),
     labelMedium:
-        TextStyle(fontSize: 12, fontWeight: FontWeight.w400, height: 1.33),
+        TextStyle(fontSize: 12, fontWeight: FontWeight.w500, height: 1.33),
     labelSmall:
-        TextStyle(fontSize: 11, fontWeight: FontWeight.w400, height: 1.27),
+        TextStyle(fontSize: 11, fontWeight: FontWeight.w500, height: 1.27),
   );
 
-static double getScaleFactor(BuildContext context) {
+  static double getScaleFactor(BuildContext context) {
     final double width = MediaQuery.of(context).size.width;
-  
-    if (width < WebbUIBreakpoints.mobile) return 0.85; // Small mobile
+    
+    if (width < 360) return 0.85; // Small mobile
     if (width < 400) return 0.9; // Normal mobile
-    if (width < WebbUIBreakpoints.tablet) return 1.0; // Tablet
-    if (width < WebbUIBreakpoints.desktop) return 1.1; // Small desktop
+    if (width < WebbUIBreakpoints.mobile) return 1.0; // Large mobile
+    if (width < WebbUIBreakpoints.tablet) return 1.05; // Small tablet
+    if (width < WebbUIBreakpoints.desktop) {
+      return 1.1; // Large tablet/Small desktop
+    }
     return 1.2; // Large desktop
   }
 
@@ -100,36 +103,28 @@ static double getScaleFactor(BuildContext context) {
     );
   }
 
-  /// Internal method to scale all styles based on context (used in BuildContext extension).
+  /// Scales all text styles based on context
   WebbUITypography scaleWithContext(BuildContext context) {
     final double scaleFactor = getScaleFactor(context);
+    
+    TextStyle scaleTextStyle(TextStyle style) {
+      return style.copyWith(
+        fontSize: (style.fontSize ?? 16.0) * scaleFactor,
+        // Optionally scale height as well, but be careful with line heights
+        height: style.height != null ? style.height! * scaleFactor : null,
+      );
+    }
+
     return copyWith(
-      displayLarge:
-          displayLarge.copyWith(
-        // fontSize: displayLarge.fontSize! * scaleFactor,
-        fontSize: (displayLarge.fontSize ?? 16.0) * scaleFactor,
-      ),
-      displayMedium: displayMedium.copyWith(
-        fontSize: (displayMedium.fontSize ?? 16.0) * scaleFactor,
-      ),
-      headlineLarge: headlineLarge.copyWith(
-        fontSize: (headlineLarge.fontSize ?? 16.0) * scaleFactor,
-      ),
-      headlineMedium: headlineMedium.copyWith(
-        fontSize: (headlineMedium.fontSize ?? 16.0) * scaleFactor,
-      ),
-      bodyLarge: bodyLarge.copyWith(
-        fontSize: (bodyLarge.fontSize ?? 16.0) * scaleFactor,
-      ),
-      bodyMedium: bodyMedium.copyWith(
-        fontSize: (bodyMedium.fontSize ?? 16.0) * scaleFactor,
-      ),
-      labelLarge: labelLarge.copyWith(
-        fontSize: (labelLarge.fontSize ?? 16.0) * scaleFactor,
-      ),
-      labelMedium: labelMedium.copyWith(
-        fontSize: (labelMedium.fontSize ?? 16.0) * scaleFactor,
-      ),
+      displayLarge: scaleTextStyle(displayLarge),
+      displayMedium: scaleTextStyle(displayMedium),
+      headlineLarge: scaleTextStyle(headlineLarge),
+      headlineMedium: scaleTextStyle(headlineMedium),
+      bodyLarge: scaleTextStyle(bodyLarge),
+      bodyMedium: scaleTextStyle(bodyMedium),
+      labelLarge: scaleTextStyle(labelLarge),
+      labelMedium: scaleTextStyle(labelMedium),
+      labelSmall: scaleTextStyle(labelSmall),
     );
   }
 }
