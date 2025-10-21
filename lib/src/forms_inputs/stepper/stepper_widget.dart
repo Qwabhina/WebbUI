@@ -169,10 +169,9 @@ class _WebbUIStepperWizardState extends State<WebbUIStepperWizard>
       mainAxisSize: MainAxisSize.min,
       children: [
         // Progress Indicator
-        WebbUIStepperProgress(
+WebbUIStepperProgress(
           steps: widget.steps,
           state: _state,
-          webbTheme: webbTheme,
           onStepTapped:
               widget.config.allowStepNavigation ? _handleStepTapped : null,
         ),
@@ -223,7 +222,6 @@ class _WebbUIStepperWizardState extends State<WebbUIStepperWizard>
           onNext: _handleNext,
           onPrevious: _handlePrevious,
           onComplete: widget.onComplete,
-          webbTheme: webbTheme,
         ),
       ],
     );
