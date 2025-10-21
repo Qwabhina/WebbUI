@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'table_models.dart';
 
+/// Signature for async data loading callbacks
+typedef DataLoader<T> = Future<List<WebbUIRow<T>>> Function(
+    int page, int pageSize);
+
 /// Manages all mutable state for the [WebbUITable], including data handling,
 /// sorting, filtering, and user interaction states (selection, editing).
 class TableStateManager<T> with ChangeNotifier {
@@ -9,7 +13,10 @@ class TableStateManager<T> with ChangeNotifier {
   List<WebbUIRow<T>> _originalRows;
   bool _isLoading = false;
   bool _isInitialLoad = true;
-  bool _isInfiniteScroll = false;
+  final bool _isInfiniteScroll;
+  final bool _isRowSelectionEnabled;
+  final int _itemsPerPage;
+  final DataLoader<T>? _dataLoader;
 
   // --- Displayed Data State (The result of sorting/filtering/pagination) ---
   List<WebbUIRow<T>> _displayedRows = [];
@@ -20,13 +27,11 @@ class TableStateManager<T> with ChangeNotifier {
 
   // --- Pagination State ---
   int _currentPage = 0;
-  final int _itemsPerPage;
   final bool isPaginated;
 
   // --- Interaction State ---
   final Set<WebbUIRow<T>> _selectedRows = {};
   EditingCell? _editingCell;
-  final bool _isRowSelectionEnabled;
 
   // --- Getters ---
 
@@ -41,7 +46,9 @@ class TableStateManager<T> with ChangeNotifier {
 
   int get currentPage => _currentPage;
   int get itemsPerPage => _itemsPerPage;
-  int get totalPages => (_originalRows.length / _itemsPerPage).ceil();
+  int get totalPages => _dataLoader != null
+      ? -1 // Unknown total pages for async loading
+      : (_originalRows.length / _itemsPerPage).ceil();
 
   TableStateManager({
     required List<WebbUIColumn<T>> columns,
@@ -50,11 +57,13 @@ class TableStateManager<T> with ChangeNotifier {
     this.isPaginated = false,
     bool isRowSelectionEnabled = false,
     bool isInfiniteScroll = false,
+    DataLoader<T>? dataLoader, // Optional async data loader
   })  : _columns = columns,
         _originalRows = initialRows,
         _itemsPerPage = itemsPerPage,
         _isRowSelectionEnabled = isRowSelectionEnabled,
-        _isInfiniteScroll = isInfiniteScroll {
+        _isInfiniteScroll = isInfiniteScroll,
+        _dataLoader = dataLoader {
     _processData();
     _isInitialLoad = false;
   }
@@ -108,9 +117,6 @@ class TableStateManager<T> with ChangeNotifier {
         _displayedRows = [];
       }
     } else if (_isInfiniteScroll) {
-      // In infinite scroll mode, _displayedRows is built up over time.
-      // We would append new data, but for this client-side demo, we use the
-      // full list as we don't have a server to call.
       _displayedRows = filteredAndSorted;
     } else {
       _displayedRows = filteredAndSorted;
@@ -188,27 +194,85 @@ class TableStateManager<T> with ChangeNotifier {
 
   // --- Async/Lazy Loading Methods ---
 
-  /// Placeholder for loading more data in infinite scroll or lazy pagination.
-  /// In a real application, this would involve an asynchronous API call.
-  void loadMoreData() async {
+  /// Loads more data for infinite scroll or pagination.
+  /// Uses the provided data loader if available, otherwise falls back to mock data.
+  Future<void> loadMoreData() async {
     if (_isLoading || !_isInfiniteScroll) return;
 
     _isLoading = true;
     notifyListeners();
 
-    // Simulating network delay
-    await Future.delayed(const Duration(milliseconds: 1000));
+    try {
+      if (_dataLoader != null) {
+        // Use the provided async data loader
+        final newRows = await _dataLoader(_currentPage + 1, _itemsPerPage);
 
-    // Placeholder: In a real implementation, you would fetch the next batch
-    // of data from the server and append it to _originalRows.
+        if (newRows.isNotEmpty) {
+          _originalRows.addAll(newRows);
+          _currentPage++;
+          _processData();
+        }
+        // If empty list returned, we've reached the end of data
+      } else {
+        // Fallback to mock data (original behavior)
+        await Future.delayed(const Duration(milliseconds: 1000));
+        
+        // Generate mock data for demonstration
+        final mockRows = _generateMockData(_currentPage + 1);
+        _originalRows.addAll(mockRows);
+        _currentPage++;
+        _processData();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading more data: $e');
+      }
+      // You could add error state handling here
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
-    // Example: If we were fetching a batch of 10 new rows:
-    // final newRows = await _fetchNewData(page: _currentPage + 1);
-    // _originalRows.addAll(newRows);
+  /// Generates mock data for demonstration purposes
+  List<WebbUIRow<T>> _generateMockData(int page) {
+    // This is a simple mock - in real usage, you'd remove this
+    // and always use the dataLoader
+    final startId = page * _itemsPerPage;
+    return List.generate(_itemsPerPage, (index) {
+      final id = startId + index;
+      return WebbUIRow<T>(
+        id: 'mock_$id',
+        originalData: null as T, // Cast for demonstration
+        data: {
+          for (final column in _columns) column.id: 'Page $page, Item $index',
+        },
+      );
+    });
+  }
 
-    _isLoading = false;
-    _currentPage++;
-    _processData();
+  /// Refreshes all data using the data loader (if available)
+  Future<void> refreshData() async {
+    if (_isLoading || _dataLoader == null) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final newRows = await _dataLoader(0, _itemsPerPage);
+      _originalRows = newRows;
+      _currentPage = 0;
+      _selectedRows.clear();
+      _editingCell = null;
+      _processData();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error refreshing data: $e');
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // New method to update entire dataset
