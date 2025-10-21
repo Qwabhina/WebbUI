@@ -84,8 +84,8 @@ class _WebbUIPasswordFieldState extends State<WebbUIPasswordField> {
       splashRadius: webbTheme.iconTheme.mediumSize / 2,
     );
 
-    final decoration = WebbUIInputDecoration(
-      webbTheme: webbTheme,
+    final decoration = WebbUIInputDecoration.create(
+      context: context,
       label: widget.label,
       hintText: widget.hintText,
       suffixIcon: suffixIcon,
@@ -94,7 +94,7 @@ class _WebbUIPasswordFieldState extends State<WebbUIPasswordField> {
       maxLines: 1,
       isFocused: _hasFocus,
       isDisabled: widget.disabled,
-    ).getDecoration();
+);
 
     return TextFormField(
       controller: _controller,
