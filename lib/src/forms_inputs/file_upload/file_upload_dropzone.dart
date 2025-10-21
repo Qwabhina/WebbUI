@@ -26,53 +26,60 @@ class FileUploadDropzone extends StatefulWidget {
 
 class _FileUploadDropzoneState extends State<FileUploadDropzone> {
   DropzoneViewController? _controller;
+  late ScaffoldMessengerState _scaffoldMessenger;
 
   @override
-  Widget build(BuildContext context) {
-    return DropzoneView(
-      operation: DragOperation.copy,
-      cursor: CursorType.grab,
-      onCreated: (ctrl) => _controller = ctrl,
-      onHover: () => widget.onDragEnter?.call(),
-      onLeave: () => widget.onDragLeave?.call(),
-      onDropFile: (ev) async {
-        if (!mounted) return;
-
-        try {
-          final mime = await _controller?.getFileMIME(ev);
-          final name = await _controller?.getFilename(ev);
-          final size = await _controller?.getFileSize(ev);
-          final bytes = await _controller?.getFileData(ev);
-
-          if (name != null && bytes != null && widget.onFileSelected != null) {
-            final file = PlatformFile(
-              name: name,
-              size: size ?? bytes.length,
-              bytes: bytes,
-            );
-
-            // Validate file
-            final validationState =
-                FileUploadUtils.validateFile(file, widget.validationConfig);
-
-            if (validationState == FileValidationState.valid) {
-              widget.onFileSelected!(file);
-            } else {
-              _showValidationError(context);
-            }
-          }
-        } catch (e) {
-          _showError(context, 'Failed to process dropped file');
-        }
-
-        widget.onDragLeave?.call();
-      },
-    );
+  void initState() {
+    super.initState();
+    // Capture scaffold messenger in initState to avoid async gaps
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
   }
 
-  void _showValidationError(BuildContext context) {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update scaffold messenger if context changes
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
+  }
+
+  Future<void> _handleDroppedFile(
+      DropzoneViewController controller, dynamic ev) async {
+    if (!mounted) return;
+
+    try {
+      final name = await controller.getFilename(ev);
+      final size = await controller.getFileSize(ev);
+      final bytes = await controller.getFileData(ev);
+
+      if (widget.onFileSelected != null) {
+        final file = PlatformFile(
+          name: name,
+          size: size,
+          bytes: bytes,
+        );
+
+        // Validate file
+        final validationState =
+            FileUploadUtils.validateFile(file, widget.validationConfig);
+
+        if (validationState == FileValidationState.valid) {
+          widget.onFileSelected!(file);
+        } else {
+          _showValidationError();
+        }
+      }
+    } catch (e) {
+      _showError('Failed to process dropped file: ${e.toString()}');
+    } finally {
+      widget.onDragLeave?.call();
+    }
+  }
+
+  void _showValidationError() {
+    if (!mounted) return;
+    
     final webbTheme = context;
-    ScaffoldMessenger.of(context).showSnackBar(
+    _scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(
           'File does not meet requirements',
@@ -86,9 +93,11 @@ class _FileUploadDropzoneState extends State<FileUploadDropzone> {
     );
   }
 
-  void _showError(BuildContext context, String message) {
+  void _showError(String message) {
+    if (!mounted) return;
+    
     final webbTheme = context;
-    ScaffoldMessenger.of(context).showSnackBar(
+    _scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(
           message,
@@ -99,6 +108,22 @@ class _FileUploadDropzoneState extends State<FileUploadDropzone> {
         backgroundColor: webbTheme.colorPalette.error,
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DropzoneView(
+      operation: DragOperation.copy,
+      cursor: CursorType.grab,
+      onCreated: (ctrl) => _controller = ctrl,
+      onHover: () => widget.onDragEnter?.call(),
+      onLeave: () => widget.onDragLeave?.call(),
+      onDropFile: (ev) {
+        if (_controller != null) {
+          _handleDroppedFile(_controller!, ev);
+        }
+      },
     );
   }
 }
