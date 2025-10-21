@@ -47,7 +47,20 @@ class WebbUIBadge extends StatelessWidget {
       case WebbUIBadgeColorType.info:
         return webbTheme.colorPalette.info;
       case WebbUIBadgeColorType.neutral:
-        return webbTheme.colorPalette.neutralDark;
+        return webbTheme.colorPalette.neutralDark.withOpacity(0.8);
+    }
+  }
+
+  Color _getForegroundColor(BuildContext webbTheme) {
+    switch (colorType) {
+      case WebbUIBadgeColorType.primary:
+      case WebbUIBadgeColorType.error:
+      case WebbUIBadgeColorType.success:
+      case WebbUIBadgeColorType.warning:
+      case WebbUIBadgeColorType.info:
+        return webbTheme.colorPalette.onPrimary;
+      case WebbUIBadgeColorType.neutral:
+        return webbTheme.colorPalette.neutralLight;
     }
   }
 
@@ -55,7 +68,7 @@ class WebbUIBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final webbTheme = context;
     final backgroundColor = _getBackgroundColor(webbTheme);
-    final foregroundColor = webbTheme.colorPalette.neutralLight;
+    final foregroundColor = _getForegroundColor(webbTheme);
 
     double getPadding() {
       switch (size) {
@@ -79,15 +92,26 @@ class WebbUIBadge extends StatelessWidget {
       }
     }
 
-    double getFontSize() {
-      final baseSize = webbTheme.typography.labelMedium.fontSize ?? 12.0;
+    TextStyle getTextStyle() {
+      final baseStyle = webbTheme.typography.labelMedium;
       switch (size) {
         case WebbUIBadgeSize.small:
-          return baseSize * 0.8;
+          return baseStyle.copyWith(
+            fontSize: (baseStyle.fontSize ?? 12) * 0.8,
+            height: 1.0,
+            color: foregroundColor,
+          );
         case WebbUIBadgeSize.medium:
-          return baseSize * 0.9;
+          return baseStyle.copyWith(
+            fontSize: (baseStyle.fontSize ?? 12) * 0.9,
+            height: 1.0,
+            color: foregroundColor,
+          );
         case WebbUIBadgeSize.large:
-          return baseSize;
+          return baseStyle.copyWith(
+            height: 1.0,
+            color: foregroundColor,
+          );
       }
     }
 
@@ -116,23 +140,22 @@ class WebbUIBadge extends StatelessWidget {
             child: Text(
               content,
               textAlign: TextAlign.center,
-              style: webbTheme.typography.labelMedium.copyWith(
-                color: foregroundColor,
-                height: 1.0,
-                fontSize: getFontSize(),
-              ),
+              style: getTextStyle(),
             ),
           );
 
     if (child == null) {
       return Semantics(
         label: semanticLabel ?? content,
+        container: true,
         child: badgeContent,
       );
     }
 
     return Badge(
       label: badgeContent,
+      backgroundColor: backgroundColor,
+      textColor: foregroundColor,
       offset: Offset(
         webbTheme.spacingGrid.spacing(0.5),
         webbTheme.spacingGrid.spacing(-0.5),
