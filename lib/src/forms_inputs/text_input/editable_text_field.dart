@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webb_ui/src/buttons_controls/button.dart';
 import 'package:webb_ui/src/theme.dart';
-import 'text_field.dart';
+import 'textfield.dart';
 import 'validation_states.dart';
 
 /// A specialized text field for inline editing scenarios with explicit
@@ -52,12 +52,14 @@ class _WebbUIEditableTextFieldState extends State<WebbUIEditableTextField> {
   late TextEditingController _controller;
   late String _originalValue;
   bool _hasChanges = false;
+  late FocusNode _textFieldFocusNode;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
     _originalValue = widget.initialValue;
+    _textFieldFocusNode = FocusNode(); // Initialize
     _controller.addListener(_handleTextChanged);
   }
 
@@ -124,6 +126,7 @@ class _WebbUIEditableTextFieldState extends State<WebbUIEditableTextField> {
 
   @override
   void dispose() {
+    _textFieldFocusNode.dispose(); // Proper cleanup
     _controller.removeListener(_handleTextChanged);
     _controller.dispose();
     super.dispose();
@@ -133,25 +136,34 @@ class _WebbUIEditableTextFieldState extends State<WebbUIEditableTextField> {
   Widget build(BuildContext context) {
     final webbTheme = context;
 
-    return KeyboardListener(
-      focusNode: FocusNode(skipTraversal: true),
-      onKeyEvent: _handleKeyPress,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // The text field
-          WebbUITextField(
-            controller: _controller,
-            focusNode: FocusNode(), // Dedicated focus node for this field
-            label: widget.label,
-            hintText: widget.hintText,
-            autofocus: widget.autoFocus,
-            validationState: widget.validationState,
-            validationMessage: widget.validationMessage,
-            onSubmitted: (_) => _handleSave(),
-            textInputAction: TextInputAction.done,
-          ),
+    return Semantics(
+      textField: true,
+      focused: _textFieldFocusNode.hasFocus, // Accurate focus state
+      enabled: !widget.isLoading,
+      readOnly: widget.isLoading,
+      label: widget.label ?? 'Editable text field',
+      hint: widget.hintText,
+      value: _controller.text,
+      child: KeyboardListener(
+        focusNode: FocusNode(skipTraversal: true),
+        onKeyEvent: _handleKeyPress,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // The text field - use our focus node
+            WebbUITextField(
+              controller: _controller,
+              focusNode:
+                  _textFieldFocusNode, // Use the state-managed focus node
+              label: widget.label,
+              hintText: widget.hintText,
+              autofocus: widget.autoFocus,
+              validationState: widget.validationState,
+              validationMessage: widget.validationMessage,
+              onSubmitted: (_) => _handleSave(),
+              textInputAction: TextInputAction.done,
+            ),
 
           // Action buttons (conditionally shown)
           if (widget.showActions) ...[
@@ -159,6 +171,7 @@ class _WebbUIEditableTextFieldState extends State<WebbUIEditableTextField> {
             _buildActionButtons(webbTheme),
           ],
         ],
+        ),
       ),
     );
   }
