@@ -185,11 +185,12 @@ extension TimeOfDayExtension on TimeOfDay {
 
     final roundedMinute = (minute / minuteInterval).round() * minuteInterval;
     if (roundedMinute >= 60) {
-      return TimeOfDay(hour: hour + 1, minute: 0);
+      return TimeOfDay(hour: hour + 1 >= 24 ? 23 : hour + 1, minute: 0);
     }
     return TimeOfDay(hour: hour, minute: roundedMinute);
   }
 
+  /// Compares this TimeOfDay to another.
   int _compareTo(TimeOfDay other) {
     if (hour < other.hour) return -1;
     if (hour > other.hour) return 1;
