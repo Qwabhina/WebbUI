@@ -2,62 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'validation_states.dart';
 
-/// A private utility class that encapsulates all the shared [InputDecoration]
-/// logic and theming for WebbUI text input fields.
-///
-/// This ensures consistency across [WebbUITextField], [WebbUIPasswordField],
-/// and any future input fields by acting as a single factory for [InputDecoration].
+/// A factory class that creates consistent InputDecoration for WebbUI text fields.
+/// This encapsulates all theming logic and ensures visual consistency.
 class WebbUIInputDecoration {
-  const WebbUIInputDecoration({
-    required this.webbTheme,
-    this.label,
-    this.hintText,
-    this.helperText,
-    this.prefixIcon,
-    this.suffixIcon,
-    this.validationState = WebbUIValidationState.none,
-    this.validationMessage,
-    this.maxLines = 1,
-    this.maxLength,
-    this.currentLength,
-    this.isFocused = false,
-    this.isDisabled = false,
-  });
-
-  final BuildContext webbTheme;
-  final String? label;
-  final String? hintText;
-  final String? helperText;
-  final Widget? prefixIcon;
-  final Widget? suffixIcon;
-  final WebbUIValidationState validationState;
-  final String? validationMessage;
-  final int? maxLines;
-  final int? maxLength;
-  final int? currentLength;
-  final bool isFocused;
-  final bool isDisabled;
-
-  /// Returns a fully themed [InputDecoration] object.
-  InputDecoration getDecoration() {
-    // Changed from build(BuildContext context) to getDecoration()
-    // 1. Determine border and icon color based on validation state
+  /// Creates a standard InputDecoration for WebbUI text fields
+  static InputDecoration create({
+    required BuildContext context,
+    String? label,
+    String? hintText,
+    String? helperText,
+    Widget? prefixIcon,
+    Widget? suffixIcon,
+    WebbUIValidationState validationState = WebbUIValidationState.none,
+    String? validationMessage,
+    int maxLines = 1,
+    int? maxLength,
+    int? currentLength,
+    bool isFocused = false,
+    bool isDisabled = false,
+  }) {
+    final webbTheme = context;
+    
     // Determine colors based on state
-    final Color borderColor = _getBorderColor();
-    // final Color textColor = _getTextColor();
-    final Color labelColor = _getLabelColor();
+    final Color borderColor = _getBorderColor(
+      context,
+      validationState,
+      isDisabled,
+    );
+    final Color labelColor = _getLabelColor(
+      context,
+      isFocused,
+      isDisabled,
+    );
 
-    // 2. Determine content padding based on single-line vs multi-line
-    // We use the stored webbTheme context to access theme properties.
     // Content padding based on single-line vs multi-line
     final verticalPadding =
-        webbTheme.spacingGrid.spacing(maxLines! > 1 ? 2 : 1.5);
+        webbTheme.spacingGrid.spacing(maxLines > 1 ? 2 : 1.5);
 
-    // 3. Construct and return the standard InputDecoration
     // Build counter widget if maxLength is provided
     Widget? counterWidget;
     if (maxLength != null) {
-      counterWidget = _buildCounterWidget();
+      counterWidget = _buildCounterWidget(context, currentLength, maxLength);
     }
 
     return InputDecoration(
@@ -96,23 +81,23 @@ class WebbUIInputDecoration {
         vertical: verticalPadding,
       ),
 
-      // Standard Border (The base border color changes based on validation state)
       // Borders
-      border: _buildBorder(borderColor, 1),
-      enabledBorder: _buildBorder(borderColor, 1),
+      border: _buildBorder(context, borderColor, 1),
+      enabledBorder: _buildBorder(context, borderColor, 1),
       focusedBorder: _buildBorder(
+        context,
         webbTheme.interactionStates.focusedBorder,
         2,
       ),
-      // Focused Border (Always uses the themed focused border color)
       disabledBorder: _buildBorder(
+        context,
         webbTheme.interactionStates.disabledColor,
         1,
       ),
-      errorBorder: _buildBorder(webbTheme.colorPalette.error, 1),
-      focusedErrorBorder: _buildBorder(webbTheme.colorPalette.error, 2),
+      errorBorder: _buildBorder(context, webbTheme.colorPalette.error, 1),
+      focusedErrorBorder:
+          _buildBorder(context, webbTheme.colorPalette.error, 2),
 
-      // Disabled Border (Always uses the themed disabled color)
       // Fill color
       filled: isDisabled,
       fillColor: isDisabled
@@ -121,8 +106,13 @@ class WebbUIInputDecoration {
     );
   }
 
-      // Error Border uses the standard border logic with error color
-  Color _getBorderColor() {
+  static Color _getBorderColor(
+    BuildContext context,
+    WebbUIValidationState validationState,
+    bool isDisabled,
+  ) {
+    final webbTheme = context;
+    
     if (isDisabled) {
       return webbTheme.interactionStates.disabledColor;
     }
@@ -132,20 +122,20 @@ class WebbUIInputDecoration {
         return webbTheme.colorPalette.success;
       case WebbUIValidationState.error:
         return webbTheme.colorPalette.error;
+      case WebbUIValidationState.warning:
+        return webbTheme.colorPalette.warning;
       default:
         return webbTheme.colorPalette.neutralDark.withOpacity(0.3);
     }
   }
 
-      // Focused Error Border (Error border remains focused on error color)
-  // Color _getTextColor() {
-  //   if (isDisabled) {
-  //     return webbTheme.interactionStates.disabledColor;
-  //   }
-  //   return webbTheme.colorPalette.neutralDark;
-  // }
-
-  Color _getLabelColor() {
+  static Color _getLabelColor(
+    BuildContext context,
+    bool isFocused,
+    bool isDisabled,
+  ) {
+    final webbTheme = context;
+    
     if (isDisabled) {
       return webbTheme.interactionStates.disabledColor;
     }
@@ -155,7 +145,12 @@ class WebbUIInputDecoration {
     return webbTheme.colorPalette.neutralDark;
   }
 
-  OutlineInputBorder _buildBorder(Color color, double width) {
+  static OutlineInputBorder _buildBorder(
+    BuildContext context,
+    Color color,
+    double width,
+  ) {
+    final webbTheme = context;
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
       borderSide: BorderSide(color: color, width: width),
@@ -163,10 +158,13 @@ class WebbUIInputDecoration {
     );
   }
 
-  Widget _buildCounterWidget() {
-    final bool isOverLimit = currentLength != null &&
-        maxLength != null &&
-        currentLength! > maxLength!;
+  static Widget _buildCounterWidget(
+    BuildContext context,
+    int? currentLength,
+    int maxLength,
+  ) {
+    final webbTheme = context;
+    final bool isOverLimit = currentLength != null && currentLength > maxLength;
     
     return Padding(
       padding: EdgeInsets.only(
