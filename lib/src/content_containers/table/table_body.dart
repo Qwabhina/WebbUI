@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:webb_ui/src/buttons_controls/buttons_controls.dart';
 import 'package:webb_ui/src/feedback_status/loaders/spinner.dart';
-import 'package:webb_ui/src/forms_inputs/text_input/editable_text_field.dart';
+import 'package:webb_ui/src/forms_inputs/text_input/editable_textfield.dart';
 import 'package:webb_ui/src/forms_inputs/text_input/text_input.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'table_models.dart';
@@ -218,10 +218,9 @@ class _TableCellWidget<T> extends StatelessWidget {
         initialValue: data?.toString() ?? '',
         onSave: onEditComplete,
         onCancel: onEditCancel,
-        showActions:
-            false, // Hide buttons for table cells - use keyboard shortcuts
+        showActions: false,
         autoFocus: true,
-        clearOnCancel: false, // Restore original value on cancel
+        clearOnCancel: false,
       );
     }
 
