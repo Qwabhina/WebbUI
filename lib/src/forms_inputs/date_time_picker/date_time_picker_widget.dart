@@ -41,14 +41,12 @@ class WebbUIDateTimePicker extends StatefulWidget {
 
 class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
   late DateTime? _selectedDateTime;
-  bool _hasBeenTouched = false;
   late ScaffoldMessengerState _scaffoldMessenger;
 
   @override
   void initState() {
     super.initState();
     _selectedDateTime = widget.initialDateTime;
-    _scaffoldMessenger = ScaffoldMessenger.of(context);
   }
 
   @override
@@ -98,13 +96,12 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
 
   Color _getBorderColor(BuildContext context) {
     final webbTheme = context;
-    
+
     if (widget.disabled) {
       return webbTheme.interactionStates.disabledColor;
     }
 
-    if (widget.validationState == DateTimeValidationState.error ||
-        (widget.required && _hasBeenTouched && _selectedDateTime == null)) {
+    if (widget.validationState == DateTimeValidationState.error) {
       return webbTheme.colorPalette.error;
     }
 
@@ -117,7 +114,7 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
 
   Widget? _buildSuffixIcon(BuildContext context) {
     final webbTheme = context;
-    
+
     if (widget.disabled) {
       return Icon(
         _getIcon(),
@@ -126,8 +123,7 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
       );
     }
 
-    if (widget.validationState == DateTimeValidationState.error ||
-        (widget.required && _hasBeenTouched && _selectedDateTime == null)) {
+    if (widget.validationState == DateTimeValidationState.error) {
       return Icon(
         Icons.error_outline,
         color: webbTheme.colorPalette.error,
@@ -151,66 +147,33 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
   }
 
   Future<void> _showPicker() async {
-    if (widget.disabled || !mounted) return;
+    if (widget.disabled) return;
 
-    setState(() => _hasBeenTouched = true);
+    DateTime? pickedDate;
+    TimeOfDay? pickedTime;
 
-    final currentSelection = _selectedDateTime ?? DateTime.now();
-
-    DateTime datePart = currentSelection;
-    TimeOfDay timePart = TimeOfDay.fromDateTime(currentSelection);
-
-    // Date Picker
-    if (widget.mode == DateTimePickerMode.date || 
+    // Handle Date Picking
+    if (widget.mode == DateTimePickerMode.date ||
         widget.mode == DateTimePickerMode.dateTime) {
-      final pickedDate = await showDatePicker(
-        context: context,
-        initialDate: currentSelection,
-        firstDate: widget.firstDate ?? DateTime(1900),
-        lastDate: widget.lastDate ?? DateTime(2101),
-        builder: (dialogContext, child) =>
-            _buildThemedPicker(dialogContext, child!),
-      );
-
-      if (!mounted) return;
-      if (pickedDate == null) return;
-
-      datePart = pickedDate;
+      pickedDate = await _showDatePicker();
+      if (pickedDate == null) return; // User cancelled
     }
 
-    // Time Picker
-    if (widget.mode == DateTimePickerMode.time || 
+    // Handle Time Picking
+    if (widget.mode == DateTimePickerMode.time ||
         widget.mode == DateTimePickerMode.dateTime) {
-      final pickedTime = await showTimePicker(
-        context: context,
-        initialTime: timePart,
-        builder: (dialogContext, child) =>
-            _buildThemedPicker(dialogContext, child!),
-      );
-
-      if (!mounted) return;
-      if (pickedTime == null) return;
-
-      // Validate time constraints
-      if (!pickedTime.isWithinConstraints(widget.timeConstraints)) {
-        _showTimeConstraintError();
-        return;
-      }
-
-      timePart = pickedTime;
+      pickedTime = await _showTimePicker();
+      if (pickedTime == null) return; // User cancelled
     }
 
-    final finalDateTime = DateTime(
-      datePart.year,
-      datePart.month,
-      datePart.day,
-      timePart.hour,
-      timePart.minute,
+    // Combine date and time
+    final finalDateTime = _combineDateTime(
+      pickedDate ?? _selectedDateTime ?? DateTime.now(),
+      pickedTime ?? TimeOfDay.fromDateTime(_selectedDateTime ?? DateTime.now()),
     );
 
-    // Validate date range
-    if (!finalDateTime.isWithinRange(widget.firstDate, widget.lastDate)) {
-      _showDateConstraintError();
+    // Validate constraints
+    if (!_validateDateTime(finalDateTime)) {
       return;
     }
 
@@ -220,24 +183,74 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
     }
   }
 
+  Future<DateTime?> _showDatePicker() async {
+    final currentDate = _selectedDateTime ?? DateTime.now();
+
+    return await showDatePicker(
+      context: context,
+      initialDate: currentDate,
+      firstDate: widget.firstDate ?? DateTime(1900),
+      lastDate: widget.lastDate ?? DateTime(2101),
+      builder: (context, child) => _buildThemedPicker(context, child!),
+    );
+  }
+
+  Future<TimeOfDay?> _showTimePicker() async {
+    final currentTime =
+        TimeOfDay.fromDateTime(_selectedDateTime ?? DateTime.now());
+
+    return await showTimePicker(
+      context: context,
+      initialTime: currentTime
+          .roundToNearestInterval(widget.timeConstraints.minuteInterval),
+      builder: (context, child) => _buildThemedPicker(context, child!),
+    );
+  }
+
+  DateTime _combineDateTime(DateTime date, TimeOfDay time) {
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+  }
+
+  bool _validateDateTime(DateTime dateTime) {
+    // Validate date range
+    if (!dateTime.isWithinRange(widget.firstDate, widget.lastDate)) {
+      _showDateConstraintError();
+      return false;
+    }
+
+    // Validate time constraints
+    final time = TimeOfDay.fromDateTime(dateTime);
+    if (!time.isWithinConstraints(widget.timeConstraints)) {
+      _showTimeConstraintError();
+      return false;
+    }
+
+    return true;
+  }
+
   Widget _buildThemedPicker(BuildContext dialogContext, Widget child) {
-    final dialogWebbTheme = dialogContext;
+    final dialogTheme = dialogContext;
     return Theme(
       data: Theme.of(dialogContext).copyWith(
-        colorScheme: Theme.of(dialogContext).colorScheme.copyWith(
-              primary: dialogWebbTheme.colorPalette.primary,
-              onPrimary: dialogWebbTheme.colorPalette.onPrimary,
-              surface: dialogWebbTheme.colorPalette.surface,
-              onSurface: dialogWebbTheme.colorPalette.onSurface,
-            ),
+        colorScheme: ColorScheme.light(
+          primary: dialogTheme.colorPalette.primary,
+          onPrimary: dialogTheme.colorPalette.onPrimary,
+          surface: dialogTheme.colorPalette.surface,
+          onSurface: dialogTheme.colorPalette.onSurface,
+        ),
+        dialogBackgroundColor: dialogTheme.colorPalette.surface,
       ),
       child: child,
     );
   }
 
   void _showTimeConstraintError() {
-    if (!mounted) return;
-    
     final webbTheme = context;
     _scaffoldMessenger.showSnackBar(
       SnackBar(
@@ -254,8 +267,6 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
   }
 
   void _showDateConstraintError() {
-    if (!mounted) return;
-    
     final webbTheme = context;
     _scaffoldMessenger.showSnackBar(
       SnackBar(
@@ -277,87 +288,106 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
     final borderColor = _getBorderColor(context);
     final suffixIcon = _buildSuffixIcon(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Label
-        if (widget.label != null)
-          Padding(
-            padding: EdgeInsets.only(bottom: webbTheme.spacingGrid.spacing(1)),
-            child: Row(
-              children: [
-                Text(widget.label!, style: webbTheme.typography.labelMedium),
-                if (widget.required)
-                  Padding(
-                    padding: EdgeInsets.only(
-                        left: webbTheme.spacingGrid.spacing(0.5)),
-                    child: Text('*',
-                        style: webbTheme.typography.labelMedium.copyWith(
-                          color: webbTheme.colorPalette.error,
-                        )),
-                  ),
-              ],
-            ),
-          ),
-
-        // Picker Input
-        InkWell(
-          onTap: _showPicker, // Removed context parameter
-          borderRadius:
-              BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: webbTheme.spacingGrid.spacing(2),
-              vertical: webbTheme.spacingGrid.spacing(1.5),
-            ),
-            decoration: BoxDecoration(
-              color: widget.disabled
-                  ? webbTheme.colorPalette.neutralDark.withOpacity(0.05)
-                  : webbTheme.colorPalette.surface,
-              borderRadius:
-                  BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-              border: Border.all(color: borderColor, width: 1.5),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    _getFormattedValue(),
-                    style: webbTheme.typography.bodyMedium.copyWith(
-                      color: _selectedDateTime == null || widget.disabled
-                          ? webbTheme.colorPalette.neutralDark.withOpacity(0.5)
+    return Semantics(
+      button: true,
+      enabled: !widget.disabled,
+      label: widget.label ?? _getPlaceholderText(),
+      value:
+          _selectedDateTime?.formattedDisplay(widget.mode, widget.timeFormat) ??
+              '',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Label
+          if (widget.label != null)
+            Padding(
+              padding:
+                  EdgeInsets.only(bottom: webbTheme.spacingGrid.spacing(1)),
+              child: Row(
+                children: [
+                  Text(
+                    widget.label!,
+                    style: webbTheme.typography.labelMedium.copyWith(
+                      color: widget.disabled
+                          ? webbTheme.interactionStates.disabledColor
                           : webbTheme.colorPalette.neutralDark,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                if (suffixIcon != null)
-                  Padding(
-                    padding:
-                        EdgeInsets.only(left: webbTheme.spacingGrid.spacing(1)),
-                    child: suffixIcon,
-                  ),
-              ],
+                  if (widget.required)
+                    Padding(
+                      padding: EdgeInsets.only(
+                          left: webbTheme.spacingGrid.spacing(0.5)),
+                      child: Text(
+                        '*',
+                        style: webbTheme.typography.labelMedium.copyWith(
+                          color: webbTheme.colorPalette.error,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ),
 
-        // Helper Text & Error Text
-        if (widget.helperText != null || widget.errorText != null)
-          Padding(
-            padding: EdgeInsets.only(top: webbTheme.spacingGrid.spacing(0.5)),
-            child: Text(
-              widget.errorText ?? widget.helperText!,
-              style: webbTheme.typography.labelMedium.copyWith(
-                color: widget.errorText != null
-                    ? webbTheme.colorPalette.error
-                    : webbTheme.colorPalette.neutralDark.withOpacity(0.6),
+          // Picker Input
+          InkWell(
+            onTap: _showPicker,
+            borderRadius:
+                BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: webbTheme.spacingGrid.spacing(2),
+                vertical: webbTheme.spacingGrid.spacing(1.5),
+              ),
+              decoration: BoxDecoration(
+                color: widget.disabled
+                    ? webbTheme.colorPalette.neutralDark.withOpacity(0.05)
+                    : webbTheme.colorPalette.surface,
+                borderRadius:
+                    BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
+                border: Border.all(color: borderColor, width: 1.5),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _getFormattedValue(),
+                      style: webbTheme.typography.bodyMedium.copyWith(
+                        color: _selectedDateTime == null || widget.disabled
+                            ? webbTheme.colorPalette.neutralDark
+                                .withOpacity(0.5)
+                            : webbTheme.colorPalette.neutralDark,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (suffixIcon != null)
+                    Padding(
+                      padding: EdgeInsets.only(
+                          left: webbTheme.spacingGrid.spacing(1)),
+                      child: suffixIcon,
+                    ),
+                ],
               ),
             ),
           ),
-      ],
+
+          // Helper Text & Error Text
+          if (widget.helperText != null || widget.errorText != null)
+            Padding(
+              padding: EdgeInsets.only(top: webbTheme.spacingGrid.spacing(0.5)),
+              child: Text(
+                widget.errorText ?? widget.helperText!,
+                style: webbTheme.typography.labelMedium.copyWith(
+                  color: widget.errorText != null
+                      ? webbTheme.colorPalette.error
+                      : webbTheme.colorPalette.neutralDark.withOpacity(0.6),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
