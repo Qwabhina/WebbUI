@@ -9,7 +9,6 @@ class WebbUIStepperNavigation extends StatelessWidget {
   final VoidCallback onNext;
   final VoidCallback onPrevious;
   final VoidCallback? onComplete;
-  final BuildContext webbTheme;
 
   const WebbUIStepperNavigation({
     super.key,
@@ -17,7 +16,6 @@ class WebbUIStepperNavigation extends StatelessWidget {
     required this.state,
     required this.onNext,
     required this.onPrevious,
-    required this.webbTheme,
     this.onComplete,
   });
 
