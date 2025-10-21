@@ -6,18 +6,17 @@ class WebbUIStepperProgress extends StatelessWidget {
   final List<WebbUIStep> steps;
   final WebbUIStepperState state;
   final ValueChanged<int>? onStepTapped;
-  final BuildContext webbTheme;
 
   const WebbUIStepperProgress({
     super.key,
     required this.steps,
     required this.state,
-    required this.webbTheme,
     this.onStepTapped,
   });
 
   @override
   Widget build(BuildContext context) {
+    final webbTheme = context;
     final iconSize = webbTheme.iconTheme.mediumSize;
 
     return Row(
@@ -25,7 +24,7 @@ class WebbUIStepperProgress extends StatelessWidget {
       children: List.generate(steps.length, (index) {
         final step = steps[index];
         final isAccessible = _isStepAccessible(index);
-        final stepConfig = _getStepConfig(index);
+        final stepConfig = _getStepConfig(index, context);
 
         return GestureDetector(
           onTap: isAccessible ? () => onStepTapped?.call(index) : null,
@@ -42,11 +41,12 @@ class WebbUIStepperProgress extends StatelessWidget {
                 _buildStepIcon(stepConfig, step.icon, iconSize),
                 SizedBox(height: webbTheme.spacingGrid.spacing(0.5)),
                 // Step Title
-                _buildStepTitle(step.title, stepConfig),
+                _buildStepTitle(step.title, stepConfig, webbTheme),
                 // Optional Step Description
                 if (step.description != null) ...[
                   SizedBox(height: webbTheme.spacingGrid.spacing(0.25)),
-                  _buildStepDescription(step.description!, stepConfig),
+                  _buildStepDescription(
+                      step.description!, stepConfig, webbTheme),
                 ],
               ],
             ),
@@ -61,17 +61,19 @@ class WebbUIStepperProgress extends StatelessWidget {
         (index > state.currentStep && state.stepCompleted[index]);
   }
 
-  _StepConfig _getStepConfig(int index) {
+  _StepConfig _getStepConfig(int index, BuildContext context) {
+    final webbTheme = context;
+    
     if (state.stepCompleted[index]) {
-      return _StepConfig.completed();
+      return _StepConfig.completed(webbTheme);
     } else if (state.stepErrors[index] != null) {
-      return _StepConfig.error();
+      return _StepConfig.error(webbTheme);
     } else if (index == state.currentStep) {
-      return _StepConfig.active();
+      return _StepConfig.active(webbTheme);
     } else if (state.stepSkipped[index]) {
-      return _StepConfig.skipped();
+      return _StepConfig.skipped(webbTheme);
     } else {
-      return _StepConfig.inactive();
+      return _StepConfig.inactive(webbTheme);
     }
   }
 
@@ -83,7 +85,8 @@ class WebbUIStepperProgress extends StatelessWidget {
     );
   }
 
-  Widget _buildStepTitle(String title, _StepConfig config) {
+  Widget _buildStepTitle(
+      String title, _StepConfig config, BuildContext webbTheme) {
     return Text(
       title,
       style: webbTheme.typography.labelMedium.copyWith(
@@ -94,7 +97,8 @@ class WebbUIStepperProgress extends StatelessWidget {
     );
   }
 
-  Widget _buildStepDescription(String description, _StepConfig config) {
+  Widget _buildStepDescription(
+      String description, _StepConfig config, BuildContext webbTheme) {
     return Text(
       description,
       style: webbTheme.typography.labelSmall.copyWith(
@@ -118,33 +122,33 @@ class _StepConfig {
     required this.isActive,
   });
 
-  factory _StepConfig.completed() => const _StepConfig(
+  factory _StepConfig.completed(BuildContext context) => _StepConfig(
         icon: Icons.check_circle,
-        color: Colors.green,
+        color: context.colorPalette.success,
         isActive: true,
       );
 
-  factory _StepConfig.error() => const _StepConfig(
+  factory _StepConfig.error(BuildContext context) => _StepConfig(
         icon: Icons.error,
-        color: Colors.red,
+        color: context.colorPalette.error,
         isActive: true,
       );
 
-  factory _StepConfig.active() => const _StepConfig(
+  factory _StepConfig.active(BuildContext context) => _StepConfig(
         icon: Icons.radio_button_checked,
-        color: Colors.blue,
+        color: context.colorPalette.primary,
         isActive: true,
       );
 
-  factory _StepConfig.skipped() => const _StepConfig(
+  factory _StepConfig.skipped(BuildContext context) => _StepConfig(
         icon: Icons.remove_circle_outline,
-        color: Colors.grey,
+        color: context.interactionStates.disabledColor,
         isActive: false,
       );
 
-  factory _StepConfig.inactive() => const _StepConfig(
+  factory _StepConfig.inactive(BuildContext context) => _StepConfig(
         icon: Icons.radio_button_unchecked,
-        color: Colors.grey,
+        color: context.colorPalette.neutralDark.withOpacity(0.5),
         isActive: false,
       );
 }
