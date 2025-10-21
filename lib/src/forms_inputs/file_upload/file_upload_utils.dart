@@ -2,15 +2,14 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 
 import 'file_upload_definitions.dart';
 
-/// Utility methods for file upload functionality
 class FileUploadUtils {
   /// Check if platform supports drag and drop
   static bool get supportsDragDrop {
-    return kIsWeb ||
-        (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
+    return kIsWeb || Platform.isWindows || Platform.isMacOS || Platform.isLinux;
   }
 
   /// Get platform-specific instruction text
@@ -21,7 +20,7 @@ class FileUploadUtils {
   }) {
     if (supportsDragDrop) {
       return isHighlighted
-          ? 'Drop file here'
+          ? 'Drop files here'
           : 'Drag & drop or click to upload';
     }
     return label;
@@ -49,6 +48,31 @@ class FileUploadUtils {
     return FileValidationState.valid;
   }
 
+  /// Validate multiple files
+  static FileDropData validateFiles(
+    List<PlatformFile> files,
+    FileValidationConfig config,
+  ) {
+    final validFiles = <PlatformFile>[];
+    bool allValid = true;
+
+    for (final file in files) {
+      final validationState = validateFile(file, config);
+      if (validationState == FileValidationState.valid) {
+        validFiles.add(file);
+      } else {
+        allValid = false;
+      }
+    }
+
+    // Check file count
+    if (config.maxFiles != null && validFiles.length > config.maxFiles!) {
+      return const FileDropData(files: [], isValid: false);
+    }
+
+    return FileDropData(files: validFiles, isValid: allValid);
+  }
+
   static String _getFileExtension(String filename) {
     final parts = filename.split('.');
     return parts.length > 1 ? '.${parts.last.toLowerCase()}' : '';
@@ -57,21 +81,33 @@ class FileUploadUtils {
   /// Format file size for display
   static String formatFileSize(int bytes) {
     if (bytes <= 0) return '0 B';
-    const suffixes = ['B', 'KB', 'MB', 'GB'];
-    var i = (log(bytes as double) / log(1024)).floor();
-    return '${(bytes / pow(1024, i)).toStringAsFixed(1)} ${suffixes[i]}';
-  }
-}
+    
+    const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    final i = (math.log(bytes) / math.log(1024)).floor();
 
-// Helper for power calculation
-double pow(double x, int exponent) {
-  double result = 1.0;
-  for (int i = 0; i < exponent; i++) {
-    result *= x;
+    if (i >= suffixes.length) {
+      return '${(bytes / math.pow(1024, suffixes.length - 1)).toStringAsFixed(1)} ${suffixes.last}';
+    }
+    
+    return '${(bytes / math.pow(1024, i)).toStringAsFixed(1)} ${suffixes[i]}';
   }
-  return result;
-}
 
-double log(double x) {
-  return x <= 0 ? 0 : math.log(x);
+  /// Get file icon based on extension
+  static IconData getFileIcon(String filename) {
+    final extension = _getFileExtension(filename).toLowerCase();
+
+    if (['.pdf'].contains(extension)) return Icons.picture_as_pdf;
+    if (['.doc', '.docx'].contains(extension)) return Icons.description;
+    if (['.xls', '.xlsx'].contains(extension)) return Icons.table_chart;
+    if (['.jpg', '.jpeg', '.png', '.gif', '.bmp'].contains(extension)) {
+      return Icons.image;
+    }
+    if (['.mp4', '.avi', '.mov', '.wmv'].contains(extension)) {
+      return Icons.video_file;
+    }
+    if (['.mp3', '.wav', '.aac'].contains(extension)) return Icons.audio_file;
+    if (['.zip', '.rar', '.7z'].contains(extension)) return Icons.archive;
+
+    return Icons.insert_drive_file;
+  }
 }

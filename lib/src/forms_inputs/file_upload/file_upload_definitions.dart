@@ -1,3 +1,5 @@
+import 'package:file_picker/file_picker.dart';
+
 /// Supported file upload methods
 enum FileUploadMethod {
   click, // Traditional file picker
@@ -26,4 +28,27 @@ class FileValidationConfig {
   });
 
   bool get allowsMultiple => (maxFiles ?? 1) > 1;
+
+  FileValidationConfig copyWith({
+    List<String>? allowedExtensions,
+    int? maxFileSize,
+    int? maxFiles,
+  }) {
+    return FileValidationConfig(
+      allowedExtensions: allowedExtensions ?? this.allowedExtensions,
+      maxFileSize: maxFileSize ?? this.maxFileSize,
+      maxFiles: maxFiles ?? this.maxFiles,
+    );
+  }
+}
+
+/// Data model for drag and drop operations
+class FileDropData {
+  final List<PlatformFile> files;
+  final bool isValid;
+
+  const FileDropData({
+    required this.files,
+    required this.isValid,
+  });
 }

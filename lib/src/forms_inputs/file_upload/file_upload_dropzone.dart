@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dropzone/flutter_dropzone.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'file_upload_definitions.dart';
 import 'file_upload_utils.dart';
 
-/// Handles drag and drop functionality for supported platforms
+/// Native Flutter drag and drop implementation
 class FileUploadDropzone extends StatefulWidget {
-  final ValueChanged<PlatformFile>? onFileSelected;
+  final ValueChanged<List<PlatformFile>> onFilesDropped;
+  final ValueChanged<String> onError;
+  final FileValidationConfig validationConfig;
+  final Widget child;
+  final bool isHighlighted;
   final VoidCallback? onDragEnter;
   final VoidCallback? onDragLeave;
-  final FileValidationConfig validationConfig;
 
   const FileUploadDropzone({
     super.key,
-    this.onFileSelected,
+    required this.onFilesDropped,
+    required this.onError,
+    required this.validationConfig,
+    required this.child,
+    required this.isHighlighted,
     this.onDragEnter,
     this.onDragLeave,
-    this.validationConfig = const FileValidationConfig(),
   });
 
   @override
@@ -25,104 +30,91 @@ class FileUploadDropzone extends StatefulWidget {
 }
 
 class _FileUploadDropzoneState extends State<FileUploadDropzone> {
-  DropzoneViewController? _controller;
-  late ScaffoldMessengerState _scaffoldMessenger;
+  bool _isDragging = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Capture scaffold messenger in initState to avoid async gaps
-    _scaffoldMessenger = ScaffoldMessenger.of(context);
-  }
+  Future<void> _handleDroppedFiles(List<PlatformFile> files) async {
+    if (files.isEmpty) return;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Update scaffold messenger if context changes
-    _scaffoldMessenger = ScaffoldMessenger.of(context);
-  }
+    final validation =
+        FileUploadUtils.validateFiles(files, widget.validationConfig);
 
-  Future<void> _handleDroppedFile(
-      DropzoneViewController controller, dynamic ev) async {
-    if (!mounted) return;
+    if (validation.files.isNotEmpty) {
+      widget.onFilesDropped(validation.files);
+    }
 
-    try {
-      final name = await controller.getFilename(ev);
-      final size = await controller.getFileSize(ev);
-      final bytes = await controller.getFileData(ev);
-
-      if (widget.onFileSelected != null) {
-        final file = PlatformFile(
-          name: name,
-          size: size,
-          bytes: bytes,
-        );
-
-        // Validate file
-        final validationState =
-            FileUploadUtils.validateFile(file, widget.validationConfig);
-
-        if (validationState == FileValidationState.valid) {
-          widget.onFileSelected!(file);
-        } else {
-          _showValidationError();
-        }
-      }
-    } catch (e) {
-      _showError('Failed to process dropped file: ${e.toString()}');
-    } finally {
-      widget.onDragLeave?.call();
+    if (!validation.isValid) {
+      widget.onError('Some files did not meet requirements');
     }
   }
 
-  void _showValidationError() {
-    if (!mounted) return;
-    
-    final webbTheme = context;
-    _scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          'File does not meet requirements',
-          style: webbTheme.typography.bodyMedium.copyWith(
-            color: webbTheme.colorPalette.onSurface,
-          ),
-        ),
-        backgroundColor: webbTheme.colorPalette.error,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+  Future<void> _handleFilePicker() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: widget.validationConfig.allowedExtensions,
+        allowMultiple: widget.validationConfig.allowsMultiple,
+        withData: true,
+      );
 
-  void _showError(String message) {
-    if (!mounted) return;
-    
-    final webbTheme = context;
-    _scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: webbTheme.typography.bodyMedium.copyWith(
-            color: webbTheme.colorPalette.onSurface,
-          ),
-        ),
-        backgroundColor: webbTheme.colorPalette.error,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      if (result != null && result.files.isNotEmpty) {
+        await _handleDroppedFiles(result.files);
+      }
+    } catch (e) {
+      widget.onError('Failed to pick files: ${e.toString()}');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return DropzoneView(
-      operation: DragOperation.copy,
-      cursor: CursorType.grab,
-      onCreated: (ctrl) => _controller = ctrl,
-      onHover: () => widget.onDragEnter?.call(),
-      onLeave: () => widget.onDragLeave?.call(),
-      onDropFile: (ev) {
-        if (_controller != null) {
-          _handleDroppedFile(_controller!, ev);
-        }
+    final webbTheme = context;
+
+    return DragTarget<PlatformFile>(
+      onWillAcceptWithDetails: (data) {
+        setState(() {
+          _isDragging = true;
+        });
+        widget.onDragEnter?.call();
+        return true;
+      },
+      onAcceptWithDetails: (file) {
+        _handleDroppedFiles([file.data]);
+        setState(() {
+          _isDragging = false;
+        });
+        widget.onDragLeave?.call();
+      },
+      onLeave: (data) {
+        setState(() {
+          _isDragging = false;
+        });
+        widget.onDragLeave?.call();
+      },
+      builder: (context, candidateData, rejectedData) {
+        final bool isActive = _isDragging || widget.isHighlighted;
+        
+        return GestureDetector(
+          onTap: _handleFilePicker,
+          child: Container(
+            decoration: BoxDecoration(
+              color: isActive
+                  ? webbTheme.colorPalette.primary.withOpacity(0.1)
+                  : webbTheme.colorPalette.surface,
+              border: Border.all(
+                color: isActive
+                    ? webbTheme.colorPalette.primary
+                    : webbTheme.colorPalette.neutralDark.withOpacity(0.3),
+                width: isActive ? 3 : 2,
+              ),
+              borderRadius:
+                  BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
+            ),
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 200),
+              scale: isActive ? 1.02 : 1.0,
+              child: widget.child,
+            ),
+          ),
+        );
       },
     );
   }
