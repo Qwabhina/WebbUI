@@ -1,20 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
+import 'text_input/input_decoration.dart';
 
 /// A styled search bar component that optionally includes space for filter widgets.
-/// It is now a StatefulWidget to manage the visibility of the clear button.
 class WebbUISearchBar extends StatefulWidget {
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onTap;
   final List<Widget>? filters;
+  final String hintText;
+  final bool autofocus;
+  final bool enabled;
+  final EdgeInsetsGeometry? padding;
 
   const WebbUISearchBar({
     super.key,
     this.controller,
+    this.focusNode,
     this.onChanged,
     this.onSubmitted,
+    this.onTap,
     this.filters,
+    this.hintText = 'Search...',
+    this.autofocus = false,
+    this.enabled = true,
+    this.padding,
   });
 
   @override
@@ -22,40 +34,45 @@ class WebbUISearchBar extends StatefulWidget {
 }
 
 class _WebbUISearchBarState extends State<WebbUISearchBar> {
-  // Use a default controller if none is provided by the parent
   late TextEditingController _internalController;
-
-  // This value determines if the clear icon should be visible
+  late FocusNode _internalFocusNode;
   bool _showClearButton = false;
+  bool _hasFocus = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize controller: use widget.controller if provided, otherwise create a new one.
     _internalController = widget.controller ?? TextEditingController();
-
-    // Set initial state for the clear button visibility
+    _internalFocusNode = widget.focusNode ?? FocusNode();
+    
     _showClearButton = _internalController.text.isNotEmpty;
-
-    // Add a listener to rebuild the widget when the text changes,
-    // which controls the visibility of the clear button.
+    
     _internalController.addListener(_onTextChange);
+    _internalFocusNode.addListener(_onFocusChange);
+
+    // Auto-focus if requested
+    if (widget.autofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _internalFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
-    // Remove the listener to prevent memory leaks.
     _internalController.removeListener(_onTextChange);
-
-    // Only dispose the controller if it was created internally
+    _internalFocusNode.removeListener(_onFocusChange);
+    
     if (widget.controller == null) {
       _internalController.dispose();
+    }
+    if (widget.focusNode == null) {
+      _internalFocusNode.dispose();
     }
     super.dispose();
   }
 
   void _onTextChange() {
-    // Check if the clear button visibility state needs updating
     final isNotEmpty = _internalController.text.isNotEmpty;
     if (_showClearButton != isNotEmpty) {
       setState(() {
@@ -63,95 +80,107 @@ class _WebbUISearchBarState extends State<WebbUISearchBar> {
       });
     }
 
-    // Also call the external onChanged callback if provided
-    if (widget.onChanged != null) {
-      widget.onChanged!(_internalController.text);
-    }
+    widget.onChanged?.call(_internalController.text);
+  }
+
+  void _onFocusChange() {
+    setState(() {
+      _hasFocus = _internalFocusNode.hasFocus;
+    });
   }
 
   void _clearText() {
     _internalController.clear();
-    // Manually trigger the external onChanged with an empty string after clearing
-    if (widget.onChanged != null) {
-      widget.onChanged!('');
-    }
-    // _onTextChange will handle the setState, but calling it directly is redundant here.
-    // The state will update automatically since clear() fires a change event.
+    widget.onChanged?.call('');
+    // Keep focus after clearing
+    _internalFocusNode.requestFocus();
+  }
+
+  Widget _buildSuffixIcon(BuildContext context) {
+    if (!_showClearButton) return const SizedBox.shrink();
+
+    final webbTheme = context;
+    return IconButton(
+      icon: Icon(
+        Icons.clear,
+        color: webbTheme.colorPalette.neutralDark.withOpacity(0.6),
+        size: webbTheme.iconTheme.smallSize,
+      ),
+      onPressed: _clearText,
+      splashRadius: webbTheme.iconTheme.smallSize / 2,
+      tooltip: 'Clear search',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final webbTheme = context;
+    final suffixIcon = _buildSuffixIcon(context);
 
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        vertical: webbTheme.spacingGrid.spacing(1),
-        horizontal: webbTheme.spacingGrid.spacing(2),
+    final decoration = WebbUIInputDecoration.create(
+      context: context,
+      hintText: widget.hintText,
+      prefixIcon: Icon(
+        Icons.search,
+        color: webbTheme.colorPalette.neutralDark.withOpacity(0.6),
+        size: webbTheme.iconTheme.mediumSize,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _internalController,
-              // onChanged is handled internally in _onTextChange now
-              onSubmitted: widget.onSubmitted,
-              keyboardType: TextInputType.text,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                hintStyle: webbTheme.typography.bodyMedium.copyWith(
-                    color: webbTheme.colorPalette.neutralDark.withOpacity(0.6)),
-                contentPadding: const EdgeInsets.symmetric(
-                    vertical: 12.0, horizontal: 16.0),
+      suffixIcon: suffixIcon,
+      maxLines: 1,
+      isFocused: _hasFocus,
+      isDisabled: !widget.enabled,
+    );
 
-                // Styling for the default border
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                      color:
-                          webbTheme.colorPalette.neutralDark.withOpacity(0.3)),
+    return Semantics(
+      textField: true,
+      label: 'Search',
+      hint: widget.hintText,
+      value: _internalController.text,
+      focused: _hasFocus,
+      enabled: widget.enabled,
+      child: Padding(
+        padding: widget.padding ??
+            EdgeInsets.symmetric(
+              vertical: webbTheme.spacingGrid.spacing(1),
+              horizontal: webbTheme.spacingGrid.spacing(2),
+            ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _internalController,
+                focusNode: _internalFocusNode,
+                onChanged:
+                    widget.onChanged, // Still call for immediate response
+                onSubmitted: widget.onSubmitted,
+                onTap: widget.onTap,
+                enabled: widget.enabled,
+                autofocus: widget.autofocus,
+                keyboardType: TextInputType.text,
+                textInputAction: TextInputAction.search,
+                decoration: decoration.copyWith(
+                  // Override fill color for search-specific styling
+                  filled: true,
+                  fillColor: widget.enabled
+                      ? webbTheme.colorPalette.neutralLight
+                      : webbTheme.interactionStates.disabledColor
+                          .withOpacity(0.1),
                 ),
-
-                // Styling for the focused border
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                      color: webbTheme.interactionStates.focusedBorder,
-                      width: 2.0),
+                style: webbTheme.typography.bodyMedium.copyWith(
+                  color: widget.enabled
+                      ? webbTheme.colorPalette.neutralDark
+                      : webbTheme.interactionStates.disabledColor,
                 ),
-
-                // Styling for the prefix icon
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: webbTheme.colorPalette.neutralDark,
-                  size: 20,
-                ),
-
-                // Now the suffixIcon (Clear button) is rendered conditionally and
-                // managed internally because the widget is Stateful.
-                suffixIcon: _showClearButton
-                    ? IconButton(
-                        icon: Icon(Icons.clear,
-                            color: webbTheme.colorPalette.neutralDark),
-                        onPressed: _clearText,
-                      )
-                    : null,
-
-                // Ensure the background is light for visibility
-                filled: true,
-                fillColor: webbTheme.colorPalette.neutralLight,
               ),
             ),
-          ),
 
-          // Add spacing between the search bar and the filters, if present
-          if (widget.filters != null && widget.filters!.isNotEmpty)
-            SizedBox(width: webbTheme.spacingGrid.spacing(1)),
-
-          // Spread the filters list if it is not null
-          if (widget.filters != null && widget.filters!.isNotEmpty)
-            ...widget.filters!,
-        ],
+            // Filters section
+            if (widget.filters != null && widget.filters!.isNotEmpty) ...[
+              SizedBox(width: webbTheme.spacingGrid.spacing(1)),
+              ...widget.filters!,
+            ],
+          ],
+        ),
       ),
     );
   }
