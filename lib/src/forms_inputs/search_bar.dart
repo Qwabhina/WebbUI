@@ -111,7 +111,7 @@ class _WebbUISearchBarState extends State<WebbUISearchBar> {
                       color:
                           webbTheme.colorPalette.neutralDark.withOpacity(0.3)),
                 ),
-                
+
                 // Styling for the focused border
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -143,7 +143,7 @@ class _WebbUISearchBarState extends State<WebbUISearchBar> {
               ),
             ),
           ),
-          
+
           // Add spacing between the search bar and the filters, if present
           if (widget.filters != null && widget.filters!.isNotEmpty)
             SizedBox(width: webbTheme.spacingGrid.spacing(1)),
