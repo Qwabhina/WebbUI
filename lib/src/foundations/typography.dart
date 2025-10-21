@@ -11,6 +11,7 @@ class WebbUITypography extends ThemeExtension<WebbUITypography> {
   final TextStyle bodyMedium;
   final TextStyle labelLarge;
   final TextStyle labelMedium;
+  final TextStyle labelSmall;
 
   const WebbUITypography({
     required this.displayLarge,
@@ -21,6 +22,7 @@ class WebbUITypography extends ThemeExtension<WebbUITypography> {
     required this.bodyMedium,
     required this.labelLarge,
     required this.labelMedium,
+    required this.labelSmall,
   });
 
   /// Default typography (base sizes at scale 1.0), using system fonts for cross-platform consistency.
@@ -41,6 +43,8 @@ class WebbUITypography extends ThemeExtension<WebbUITypography> {
         TextStyle(fontSize: 14, fontWeight: FontWeight.w400, height: 1.43),
     labelMedium:
         TextStyle(fontSize: 12, fontWeight: FontWeight.w400, height: 1.33),
+    labelSmall:
+        TextStyle(fontSize: 11, fontWeight: FontWeight.w400, height: 1.27),
   );
 
 static double getScaleFactor(BuildContext context) {
@@ -63,6 +67,7 @@ static double getScaleFactor(BuildContext context) {
     TextStyle? bodyMedium,
     TextStyle? labelLarge,
     TextStyle? labelMedium,
+    TextStyle? labelSmall,
   }) {
     return WebbUITypography(
       displayLarge: displayLarge ?? this.displayLarge,
@@ -73,6 +78,7 @@ static double getScaleFactor(BuildContext context) {
       bodyMedium: bodyMedium ?? this.bodyMedium,
       labelLarge: labelLarge ?? this.labelLarge,
       labelMedium: labelMedium ?? this.labelMedium,
+      labelSmall: labelSmall ?? this.labelSmall,
     );
   }
 
@@ -90,6 +96,7 @@ static double getScaleFactor(BuildContext context) {
       bodyMedium: TextStyle.lerp(bodyMedium, other.bodyMedium, t)!,
       labelLarge: TextStyle.lerp(labelLarge, other.labelLarge, t)!,
       labelMedium: TextStyle.lerp(labelMedium, other.labelMedium, t)!,
+      labelSmall: TextStyle.lerp(labelSmall, other.labelSmall, t)!,
     );
   }
 
