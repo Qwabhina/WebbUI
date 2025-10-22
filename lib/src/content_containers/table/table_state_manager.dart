@@ -5,9 +5,20 @@ import 'table_models.dart';
 typedef DataLoader<T> = Future<List<WebbUIRow<T>>> Function(
     int page, int pageSize);
 
+// Table Error state
+class TableError {
+  final String message;
+  final DateTime timestamp;
+
+  TableError(this.message) : timestamp = DateTime.now();
+}
+
 /// Manages all mutable state for the [WebbUITable], including data handling,
 /// sorting, filtering, and user interaction states (selection, editing).
 class TableStateManager<T> with ChangeNotifier {
+  // --- Error State ---
+  TableError? _currentError;  
+
   // --- Data and Loading State ---
   final List<WebbUIColumn<T>> _columns;
   List<WebbUIRow<T>> _originalRows;
@@ -33,8 +44,9 @@ class TableStateManager<T> with ChangeNotifier {
   final Set<WebbUIRow<T>> _selectedRows = {};
   EditingCell? _editingCell;
 
-  // --- Getters ---
 
+  // --- Getters ---
+  TableError? get currentError => _currentError;
   List<WebbUIColumn<T>> get columns => _columns;
   List<WebbUIRow<T>> get rows => _displayedRows;
   bool get isLoading => _isLoading;
@@ -68,6 +80,18 @@ class TableStateManager<T> with ChangeNotifier {
     _isInitialLoad = false;
   }
 
+
+  void _setError(String message) {
+    _currentError = TableError(message);
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  void clearError() {
+    _currentError = null;
+    notifyListeners();
+  }
+  
   void _processData() {
     List<WebbUIRow<T>> filteredAndSorted = List.from(_originalRows);
 
@@ -176,19 +200,43 @@ class TableStateManager<T> with ChangeNotifier {
     _editingCell = null;
     notifyListeners();
   }
-
+  /// Updates the value of a specific cell after validation.
   void updateCellValue(String rowId, String columnId, dynamic newValue) {
     try {
       final rowIndex = _originalRows.indexWhere((r) => r.id == rowId);
-      if (rowIndex != -1) {
-        _originalRows[rowIndex].data[columnId] = newValue;
-        _processData();
-        clearEditingCell();
+      if (rowIndex == -1) {
+        _setError('Row not found: $rowId');
+        return;
       }
+
+      // Basic validation based on column type
+      if (!_isValidValueForColumn(newValue, columnId)) {
+        _setError('Invalid value for column $columnId');
+        return;
+      }
+
+      _originalRows[rowIndex].data[columnId] = newValue;
+      _processData();
+      clearEditingCell();
+      _currentError = null;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error updating cell value: $e');
-      }
+      _setError('Error updating cell: ${e.toString()}');
+    }
+  }
+
+  bool _isValidValueForColumn(dynamic value, String columnId) {
+    final column = _columns.firstWhere((col) => col.id == columnId);
+
+    switch (column.columnType) {
+      case WebbUIColumnType.number:
+      case WebbUIColumnType.currency:
+      case WebbUIColumnType.percentage:
+        return value is num ||
+            (value is String && double.tryParse(value) != null);
+      case WebbUIColumnType.boolean:
+        return value is bool;
+      default:
+        return true; // No validation for other types
     }
   }
 
@@ -196,59 +244,28 @@ class TableStateManager<T> with ChangeNotifier {
 
   /// Loads more data for infinite scroll or pagination.
   /// Uses the provided data loader if available, otherwise falls back to mock data.
-  Future<void> loadMoreData() async {
+Future<void> loadMoreData() async {
     if (_isLoading || !_isInfiniteScroll) return;
 
     _isLoading = true;
+    _currentError = null;
     notifyListeners();
 
     try {
       if (_dataLoader != null) {
-        // Use the provided async data loader
         final newRows = await _dataLoader(_currentPage + 1, _itemsPerPage);
-
         if (newRows.isNotEmpty) {
           _originalRows.addAll(newRows);
           _currentPage++;
           _processData();
         }
-        // If empty list returned, we've reached the end of data
       } else {
-        // Fallback to mock data (original behavior)
-        await Future.delayed(const Duration(milliseconds: 1000));
-        
-        // Generate mock data for demonstration
-        final mockRows = _generateMockData(_currentPage + 1);
-        _originalRows.addAll(mockRows);
-        _currentPage++;
-        _processData();
+        // Remove mock data generation in production
+        _setError('Data loader not provided for infinite scroll');
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Error loading more data: $e');
-      }
-      // You could add error state handling here
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      _setError('Failed to load more data: ${e.toString()}');
     }
-  }
-
-  /// Generates mock data for demonstration purposes
-  List<WebbUIRow<T>> _generateMockData(int page) {
-    // This is a simple mock - in real usage, you'd remove this
-    // and always use the dataLoader
-    final startId = page * _itemsPerPage;
-    return List.generate(_itemsPerPage, (index) {
-      final id = startId + index;
-      return WebbUIRow<T>(
-        id: 'mock_$id',
-        originalData: null as T, // Cast for demonstration
-        data: {
-          for (final column in _columns) column.id: 'Page $page, Item $index',
-        },
-      );
-    });
   }
 
   /// Refreshes all data using the data loader (if available)
