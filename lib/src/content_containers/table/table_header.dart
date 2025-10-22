@@ -10,25 +10,25 @@ class WebbUITableHeader<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Watch the state manager to get column definitions and current sort state
     final state = context.watch<TableStateManager<T>>();
     final webbTheme = context;
-    final typography =
-        webbTheme.typography.labelLarge.copyWith(fontWeight: FontWeight.bold);
+    final typography = webbTheme.typography.labelLarge.copyWith(
+      fontWeight: FontWeight.w600,
+      color: webbTheme.colorPalette.neutralDark,
+    );
 
-    // Header container styling
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: webbTheme.spacingGrid.spacing(2),
-        vertical: webbTheme.spacingGrid.spacing(1),
+        vertical: webbTheme.spacingGrid.spacing(1.5),
       ),
       decoration: BoxDecoration(
-        color: webbTheme.colorPalette.neutralDark
-            .withOpacity(0.05), // Light background for header
+        color: webbTheme.colorPalette.neutralDark.withOpacity(0.03),
         border: Border(
           bottom: BorderSide(
-              color: webbTheme.colorPalette.neutralDark.withOpacity(0.1),
-              width: 1.0),
+            color: webbTheme.colorPalette.neutralDark.withOpacity(0.1),
+            width: 1.0,
+          ),
         ),
       ),
       child: Row(
@@ -36,39 +36,51 @@ class WebbUITableHeader<T> extends StatelessWidget {
           final isSorting = state.sortColumnId == column.id;
           final isAscending = state.isAscending;
 
-          // Wrap title in a widget that handles sorting click
-          Widget columnTitle = GestureDetector(
-            onTap:
-                column.isSortable ? () => state.setSortColumn(column.id) : null,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 1. Column Title (using custom title renderer if provided)
-                if (column.titleRenderer != null)
-                  column.titleRenderer!(context, column)
-                else
-                  Text(column.title, style: typography),
+          Widget columnTitle = Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: column.isSortable
+                  ? () => state.setSortColumn(column.id)
+                  : null,
+              borderRadius:
+                  BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
+              child: Container(
+                padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(1)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Column Title
+                    if (column.titleRenderer != null)
+                      column.titleRenderer!(context, column)
+                    else
+                      Text(
+                        column.title,
+                        style: typography,
+                        overflow: TextOverflow.ellipsis,
+                      ),
 
-                // 2. Sort Icon
-                if (column.isSortable) ...[
-                  SizedBox(width: webbTheme.spacingGrid.spacing(0.5)),
-                  Icon(
-                    isSorting
-                        ? (isAscending
-                            ? Icons.arrow_upward
-                            : Icons.arrow_downward)
-                        : Icons.sort_by_alpha, // Default icon when not sorted
-                    size: webbTheme.iconTheme.smallSize,
-                    color: isSorting
-                        ? webbTheme.colorPalette.primary
-                        : webbTheme.colorPalette.neutralDark.withOpacity(0.5),
-                  ),
-                ],
-              ],
+                    // Sort Icon
+                    if (column.isSortable) ...[
+                      SizedBox(width: webbTheme.spacingGrid.spacing(0.5)),
+                      Icon(
+                        isSorting
+                            ? (isAscending
+                                ? Icons.arrow_upward
+                                : Icons.arrow_downward)
+                            : Icons.unfold_more,
+                        size: webbTheme.iconTheme.smallSize,
+                        color: isSorting
+                            ? webbTheme.colorPalette.primary
+                            : webbTheme.colorPalette.neutralDark
+                                .withOpacity(0.4),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           );
 
-          // Final cell structure uses Expanded with flex factor
           return Expanded(
             flex: column.widthFlex,
             child: Align(
