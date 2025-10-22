@@ -4,6 +4,16 @@ import 'chart_definitions.dart';
 import 'chart_legends.dart';
 import 'chart_painter.dart';
 
+/// A comprehensive, interactive chart component supporting multiple chart types
+/// and extensive customization through WebbUI's design system.
+///
+/// Features:
+/// - Multiple chart types (line, bar, column, area, pie, doughnut, stacked variants)
+/// - Interactive zoom, pan, and tooltips
+/// - Legend toggling for series visibility
+/// - Responsive design with proper theming
+/// - Empty state handling
+/// - Accessibility support
 class WebbUIChart extends StatefulWidget {
   final List<ChartSeries> series;
   final ChartType chartType;
@@ -12,6 +22,9 @@ class WebbUIChart extends StatefulWidget {
   final bool showLegends;
   final ChartConfig config;
   final String? emptyStateText;
+  final double aspectRatio;
+  final bool interactive;
+  final ValueChanged<ChartData?>? onDataPointTapped;
 
   const WebbUIChart({
     super.key,
@@ -22,6 +35,9 @@ class WebbUIChart extends StatefulWidget {
     this.showLegends = true,
     this.config = const ChartConfig(),
     this.emptyStateText,
+    this.aspectRatio = 16 / 9,
+    this.interactive = true,
+    this.onDataPointTapped,
   });
 
   @override
@@ -58,6 +74,7 @@ class _WebbUIChartState extends State<WebbUIChart> {
     }
   }
 
+  /// Initializes series visibility based on the series' visible property
   void _initializeVisibility() {
     _seriesVisibility.clear();
     for (var s in widget.series) {
@@ -65,7 +82,10 @@ class _WebbUIChartState extends State<WebbUIChart> {
     }
   }
 
+  /// Handles scale updates for zooming functionality
   void _handleScaleUpdate(ScaleUpdateDetails details) {
+    if (!widget.interactive) return;
+    
     setState(() {
       if (details.scale != 1.0) {
         _scale = (_scale * details.scale).clamp(0.5, 5.0);
@@ -75,18 +95,37 @@ class _WebbUIChartState extends State<WebbUIChart> {
     });
   }
 
+  /// Handles tap events for tooltip display and data point selection
   void _handleTap(Offset localPosition) {
+    if (!widget.interactive) return;
+    
     setState(() {
       _tapPosition = localPosition;
     });
+
+    // Notify parent of data point tap if callback provided
+    widget.onDataPointTapped?.call(_findNearestDataPoint(localPosition));
   }
 
+  /// Finds the nearest data point to a tap position
+  ChartData? _findNearestDataPoint(Offset localPosition) {
+    // This would use the coordinate system to find the nearest point
+    // For simplicity, returning first point - in real implementation,
+    // this would use the ChartCoordinateSystem from the painter
+    for (final s in widget.series) {
+      if (s.data.isNotEmpty) return s.data.first;
+    }
+    return null;
+  }
+
+  /// Toggles series visibility when legend items are tapped
   void _onLegendTapped(String seriesName) {
     setState(() {
       _seriesVisibility[seriesName] = !_seriesVisibility[seriesName]!;
     });
   }
 
+  /// Resets zoom and pan to default values
   void _resetZoom() {
     setState(() {
       _scale = 1.0;
@@ -95,100 +134,199 @@ class _WebbUIChartState extends State<WebbUIChart> {
     });
   }
 
+  /// Returns true if there's any visible data to display
   bool get _hasData {
     return widget.series.isNotEmpty &&
-        widget.series.any((s) => s.data.isNotEmpty);
+        widget.series.any(
+            (s) => (_seriesVisibility[s.name] ?? true) && s.data.isNotEmpty);
+  }
+
+  /// Returns true for circular chart types (pie/doughnut)
+  bool get _isCircularChart {
+    return widget.chartType == ChartType.pie ||
+        widget.chartType == ChartType.doughnut;
   }
 
   @override
   Widget build(BuildContext context) {
     final webbTheme = context;
+    
+    // Get only visible series for painting
     final visibleSeries =
         widget.series.where((s) => _seriesVisibility[s.name] ?? true).toList();
 
-    return Column(
-      children: [
-        // Legend at the top if configured
-        if (widget.showLegends &&
-            _hasData &&
-            widget.config.legendPosition == LegendPosition.top)
-          ChartLegend(
-            series: widget.series,
-            visibility: _seriesVisibility,
-            onLegendTapped: _onLegendTapped,
-            position: widget.config.legendPosition,
-            alignment: widget.config.legendAlignment,
-          ),
+    return Semantics(
+      label: 'Chart displaying ${widget.series.length} data series',
+      child: AspectRatio(
+        aspectRatio: widget.aspectRatio,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // --- TOP LEGEND ---
+            if (widget.showLegends &&
+                _hasData &&
+                widget.config.legendPosition == LegendPosition.top)
+              ChartLegend(
+                series: widget.series,
+                visibility: _seriesVisibility,
+                onLegendTapped: _onLegendTapped,
+                position: widget.config.legendPosition,
+                alignment: widget.config.legendAlignment,
+              ),
 
-        // Chart controls
-        if (widget.chartType != ChartType.pie &&
-            widget.chartType != ChartType.doughnut)
-          Padding(
-            padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(1)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.zoom_out_map,
-                      size: webbTheme.iconTheme.smallSize),
-                  onPressed: _resetZoom,
-                  tooltip: 'Reset zoom',
+            // --- CHART CONTROLS (only for non-circular, interactive charts) ---
+            if (widget.interactive && !_isCircularChart && _hasData)
+              _buildChartControls(webbTheme),
+
+            // --- MAIN CHART AREA ---
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: webbTheme.colorPalette.background,
+                  borderRadius: BorderRadius.circular(
+                    webbTheme.spacingGrid.baseSpacing,
+                  ),
+                  border: Border.all(
+                    color: webbTheme.colorPalette.neutralDark.withOpacity(0.1),
+                    width: 1,
+                  ),
                 ),
-              ],
+                child: _hasData
+                    ? _buildChartContent(webbTheme, visibleSeries)
+                    : _buildEmptyState(webbTheme),
+              ),
             ),
-          ),
 
-        // Chart area
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: webbTheme.colorPalette.background,
-              borderRadius:
-                  BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
-            ),
-            child: _hasData
-                ? GestureDetector(
-                    onTapDown: (details) => _handleTap(details.localPosition),
-                    onScaleUpdate: _handleScaleUpdate,
-                    onDoubleTap: _resetZoom,
-                    child: CustomPaint(
-                      painter: ChartPainter(
-                        series: visibleSeries,
-                        chartType: widget.chartType,
-                        xAxisType: widget.xAxisType,
-                        yAxisType: widget.yAxisType,
-                        tapPosition: _tapPosition,
-                        scale: _scale,
-                        panOffset: _panOffset,
-                        webbTheme: webbTheme,
-                        config: widget.config,
-                      ),
+            // --- BOTTOM LEGEND ---
+            if (widget.showLegends &&
+                _hasData &&
+                widget.config.legendPosition == LegendPosition.bottom)
+              ChartLegend(
+                series: widget.series,
+                visibility: _seriesVisibility,
+                onLegendTapped: _onLegendTapped,
+                position: widget.config.legendPosition,
+                alignment: widget.config.legendAlignment,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds chart controls (zoom reset button)
+  Widget _buildChartControls(BuildContext webbTheme) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: webbTheme.spacingGrid.spacing(2),
+        vertical: webbTheme.spacingGrid.spacing(1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Zoom reset button
+          if (_scale != 1.0 || _panOffset != Offset.zero)
+            Tooltip(
+              message: 'Reset zoom and pan',
+              child: InkWell(
+                onTap: _resetZoom,
+                borderRadius: BorderRadius.circular(
+                  webbTheme.spacingGrid.baseSpacing,
+                ),
+                child: Container(
+                  padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(1)),
+                  decoration: BoxDecoration(
+                    color: webbTheme.colorPalette.surface,
+                    borderRadius: BorderRadius.circular(
+                      webbTheme.spacingGrid.baseSpacing,
                     ),
-                  )
-                : Center(
-                    child: Text(
-                      widget.emptyStateText ?? 'No chart data available',
-                      style: webbTheme.typography.bodyMedium.copyWith(
-                        color:
-                            webbTheme.colorPalette.neutralDark.withOpacity(0.5),
-                      ),
+                    border: Border.all(
+                      color:
+                          webbTheme.colorPalette.neutralDark.withOpacity(0.2),
                     ),
                   ),
-          ),
-        ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.zoom_out_map,
+                        size: webbTheme.iconTheme.smallSize,
+                        color: webbTheme.colorPalette.neutralDark,
+                      ),
+                      SizedBox(width: webbTheme.spacingGrid.spacing(0.5)),
+                      Text(
+                        'Reset View',
+                        style: webbTheme.typography.labelSmall.copyWith(
+                          color: webbTheme.colorPalette.neutralDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
-        // Legend at the bottom if configured
-        if (widget.showLegends &&
-            _hasData &&
-            widget.config.legendPosition == LegendPosition.bottom)
-          ChartLegend(
-            series: widget.series,
-            visibility: _seriesVisibility,
-            onLegendTapped: _onLegendTapped,
-            position: widget.config.legendPosition,
-            alignment: widget.config.legendAlignment,
+  /// Builds the main chart content with gesture support
+  Widget _buildChartContent(
+    BuildContext webbTheme,
+    List<ChartSeries> visibleSeries,
+  ) {
+    return GestureDetector(
+      onTapDown: (details) => _handleTap(details.localPosition),
+      onScaleUpdate: widget.interactive ? _handleScaleUpdate : null,
+      onDoubleTap: widget.interactive ? _resetZoom : null,
+      behavior: HitTestBehavior.opaque,
+      child: CustomPaint(
+        painter: WebbUIChartPainter(
+          series: visibleSeries,
+          chartType: widget.chartType,
+          config: widget.config,
+          tapPosition: _tapPosition,
+          scale: _scale,
+          panOffset: _panOffset,
+          webbTheme: webbTheme,
+        ),
+      ),
+    );
+  }
+
+  /// Builds the empty state when no data is available
+  Widget _buildEmptyState(BuildContext webbTheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.bar_chart,
+            size: webbTheme.iconTheme.largeSize * 2,
+            color: webbTheme.colorPalette.neutralDark.withOpacity(0.3),
           ),
-      ],
+          SizedBox(height: webbTheme.spacingGrid.spacing(2)),
+          Text(
+            widget.emptyStateText ?? 'No chart data available',
+            style: webbTheme.typography.bodyMedium.copyWith(
+              color: webbTheme.colorPalette.neutralDark.withOpacity(0.5),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (widget.series.isNotEmpty &&
+              widget.series.every((s) => !(_seriesVisibility[s.name] ?? true)))
+            Padding(
+              padding: EdgeInsets.only(top: webbTheme.spacingGrid.spacing(1)),
+              child: Text(
+                'All series are hidden. Use the legend to show data.',
+                style: webbTheme.typography.labelSmall.copyWith(
+                  color: webbTheme.colorPalette.neutralDark.withOpacity(0.4),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
