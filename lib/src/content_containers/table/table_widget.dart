@@ -36,6 +36,7 @@ class WebbUITable<T> extends StatelessWidget {
   /// pagination controls if [isPaginated] is true.
   final Widget? customFooter;
   final double? maxHeight;
+  final DataLoader<T>? dataLoader;
 
   const WebbUITable({
     super.key,
@@ -48,6 +49,7 @@ class WebbUITable<T> extends StatelessWidget {
     this.isRowSelectionEnabled = true,
     this.customFooter,
     this.maxHeight,
+    this.dataLoader,
   });
 
   @override
@@ -65,25 +67,25 @@ class WebbUITable<T> extends StatelessWidget {
         isPaginated: isPaginated,
         isRowSelectionEnabled: isRowSelectionEnabled,
         isInfiniteScroll: isInfiniteScroll,
+        dataLoader: dataLoader,
       ),
       builder: (context, child) {
         // We use Builder to ensure we can access the TableStateManager via context.watch
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Custom Header (e.g., global filter, title) ---
+            // Custom Header
             if (header != null)
               Padding(
                 padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
                 child: header!,
               ),
 
-            // --- Table Structure ---
-            // Table container with proper constraints
+            // Table Structure
             Container(
               constraints: BoxConstraints(
                 maxHeight: effectiveMaxHeight,
-                minHeight: 200, // Minimum height for empty states
+                minHeight: 200,
               ),
               decoration: BoxDecoration(
                 color: webbTheme.colorPalette.surface,
