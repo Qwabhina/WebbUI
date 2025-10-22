@@ -1,5 +1,11 @@
 export 'sidenav.dart';
-export 'top_navbar.dart';
+export 'top_navbar_a.dart';
 export 'bottom_navbar/bottom_navbar.dart';
 export 'tabs.dart';
 export 'breadcrumbs.dart';
+export 'bottom_navbar/bottom_navbar.dart' show WebbUIBottomNav;
+export 'sidenav.dart' show WebbUISideNav, WebbUISideNavItem;
+export 'top_navbar.dart' show WebbUITopNavBarVariant;
+export 'window_controls.dart' show WebbUIWindowControls;
+export 'app_bar_with_controls.dart' show WebbUIAppBar;
+export 'sidenav_scaffold.dart' show WebbUISideNavScaffold;
