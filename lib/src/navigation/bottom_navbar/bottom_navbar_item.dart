@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class WebbUIBottomNavItem {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final String? semanticLabel;
+  final Widget? activeIcon;
 
   const WebbUIBottomNavItem({
     required this.icon,
     required this.label,
-    required this.onTap,
+    this.semanticLabel,
+    this.activeIcon,
   });
 }
