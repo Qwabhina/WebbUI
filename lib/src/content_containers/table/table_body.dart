@@ -139,8 +139,7 @@ class _WebbUITableBodyState<T> extends State<WebbUITableBody<T>> {
     );
   }
 }
-
-class _TableCellWidget<T> extends StatelessWidget {
+class _TableCellWidget<T> extends StatefulWidget {
   final WebbUIRow<T> row;
   final WebbUIColumn<T> column;
   final dynamic data;
@@ -157,24 +156,26 @@ class _TableCellWidget<T> extends StatelessWidget {
   });
 
   @override
+  State<_TableCellWidget<T>> createState() => __TableCellWidgetState<T>();
+}
+
+class __TableCellWidgetState<T> extends State<_TableCellWidget<T>> {
+  @override
   Widget build(BuildContext context) {
-    final stateManager =
-        Provider.of<TableStateManager<T>>(context, listen: false);
-    final isEditing = stateManager.editingCell?.rowId == row.id &&
-        stateManager.editingCell?.columnId == column.id;
+    final stateManager = Provider.of<TableStateManager<T>>(context);
+    final isEditing = stateManager.editingCell?.rowId == widget.row.id &&
+        stateManager.editingCell?.columnId == widget.column.id;
 
     Widget content;
     
     if (isEditing) {
-      // Use WebbUIEditableTextField for editing mode
       content = _buildCellEditor(context);
     } else {
-      // Use custom renderer or default text for display mode
-      if (column.cellRenderer != null) {
-        content = column.cellRenderer!(context, data, row);
+      if (widget.column.cellRenderer != null) {
+        content = widget.column.cellRenderer!(context, widget.data, widget.row);
       } else {
         content = Text(
-          data?.toString() ?? '',
+          _formatDisplayValue(widget.data, widget.column.columnType),
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium,
         );
@@ -182,11 +183,11 @@ class _TableCellWidget<T> extends StatelessWidget {
     }
 
     return Expanded(
-      flex: column.widthFlex,
+      flex: widget.column.widthFlex,
       child: GestureDetector(
         onTap: () {
-          if (!isEditing && column.columnType != WebbUIColumnType.boolean) {
-            stateManager.setEditingCell(row.id, column.id);
+          if (!isEditing && _isEditableColumn(widget.column.columnType)) {
+            stateManager.setEditingCell(widget.row.id, widget.column.id);
           }
         },
         child: Container(
@@ -194,54 +195,58 @@ class _TableCellWidget<T> extends StatelessWidget {
             horizontal: 16.0,
             vertical: 12.0,
           ),
-          alignment: column.alignment,
+          alignment: widget.column.alignment,
           child: content,
         ),
       ),
     );
   }
 
+  bool _isEditableColumn(WebbUIColumnType columnType) {
+    return columnType !=
+        WebbUIColumnType.boolean; // Boolean handled by checkbox directly
+  }
+
+  String _formatDisplayValue(dynamic data, WebbUIColumnType columnType) {
+    if (data == null) return '';
+
+    switch (columnType) {
+      case WebbUIColumnType.currency:
+        return '\$${data.toStringAsFixed(2)}';
+      case WebbUIColumnType.percentage:
+        return '${data.toStringAsFixed(1)}%';
+      case WebbUIColumnType.number:
+        return data.toString();
+      case WebbUIColumnType.boolean:
+        return data ? 'Yes' : 'No';
+      default:
+        return data.toString();
+    }
+  }
+
   Widget _buildCellEditor(BuildContext context) {
-    // Use custom editor if provided
-    if (column.editCellRenderer != null) {
-      return column.editCellRenderer!(
+    if (widget.column.editCellRenderer != null) {
+      return widget.column.editCellRenderer!(
         context,
-        data,
-        onEditComplete,
-        row,
+        widget.data,
+        widget.onEditComplete,
+        widget.row,
       );
     }
 
-    // Use WebbUIEditableTextField for text-based columns
-    if (_isTextBasedColumn(column.columnType)) {
-      return WebbUIEditableTextField(
-        initialValue: data?.toString() ?? '',
-        onSave: onEditComplete,
-        onCancel: onEditCancel,
-        showActions: false,
-        autoFocus: true,
-        clearOnCancel: false,
-      );
+    if (_isTextBasedColumn(widget.column.columnType)) {
+      return _buildTextEditor(context);
     }
 
-    // Special handling for boolean columns
-    if (column.columnType == WebbUIColumnType.boolean) {
+    if (widget.column.columnType == WebbUIColumnType.boolean) {
       return _buildBooleanEditor(context);
     }
 
-    // Special handling for selection columns
-    if (column.columnType == WebbUIColumnType.selection) {
+    if (widget.column.columnType == WebbUIColumnType.selection) {
       return _buildSelectionEditor(context);
     }
 
-    // Fallback to basic text field
-    return WebbUIEditableTextField(
-      initialValue: data?.toString() ?? '',
-      onSave: onEditComplete,
-      onCancel: onEditCancel,
-      showActions: false,
-      autoFocus: true,
-    );
+    return _buildTextEditor(context); // Fallback
   }
 
   bool _isTextBasedColumn(WebbUIColumnType columnType) {
@@ -256,38 +261,33 @@ class _TableCellWidget<T> extends StatelessWidget {
     ].contains(columnType);
   }
 
-  Widget _buildBooleanEditor(BuildContext context) {
-    final webbTheme = context;
-    final currentValue = data as bool? ?? false;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        WebbUICheckbox(
-          value: currentValue,
-          onChanged: (value) => onEditComplete(value),
-        ),
-        SizedBox(width: webbTheme.spacingGrid.spacing(1)),
-        // Optional: Add quick save/cancel for boolean fields
-        WebbUIButton(
-          label: 'Save',
-          onPressed: () => onEditComplete(currentValue),
-          variant: WebbUIButtonVariant.primary,
-        ),
-        SizedBox(width: webbTheme.spacingGrid.spacing(0.5)),
-        WebbUIButton(
-          label: 'Cancel',
-          onPressed: onEditCancel,
-          variant: WebbUIButtonVariant.tertiary,
-        ),
-      ],
+  Widget _buildTextEditor(BuildContext context) {
+    return WebbUIEditableTextField(
+      initialValue: widget.data?.toString() ?? '',
+      onSave: widget.onEditComplete,
+      onCancel: widget.onEditCancel,
+      showActions: false,
+      autoFocus: true,
+      clearOnCancel: false,
     );
   }
 
-  Widget _buildSelectionEditor(BuildContext context) {
+  Widget _buildBooleanEditor(BuildContext context) {
+    final currentValue = widget.data as bool? ?? false;
+
+    return WebbUICheckbox(
+      value: currentValue,
+      onChanged: (value) {
+        widget.onEditComplete(value);
+        widget.onEditCancel(); // Auto-close after change
+      },
+    );
+  }
+
+  Widget _buildSelectionEditor(BuildContext context) {    
     return WebbUIDropdown<dynamic>(
-      value: data,
-      items: column.selectionOptions
+      value: widget.data,
+      items: widget.column.selectionOptions
               ?.map((opt) => DropdownMenuItem(
                     value: opt,
                     child: Text(opt.toString()),
@@ -295,8 +295,8 @@ class _TableCellWidget<T> extends StatelessWidget {
               .toList() ??
           [],
       onChanged: (newValue) {
-        onEditComplete(newValue);
-        onEditCancel(); // Auto-close after selection
+        widget.onEditComplete(newValue);
+        widget.onEditCancel(); // Auto-close after selection
       },
     );
   }
