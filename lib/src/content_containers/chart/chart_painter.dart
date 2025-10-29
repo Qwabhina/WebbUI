@@ -6,8 +6,9 @@ import 'chart_grid_painter.dart';
 import 'chart_series_painter.dart';
 import 'chart_tooltip_painter.dart';
 
-/// Main chart painter that orchestrates all modular painters
-/// This follows the composite pattern, delegating to specialized painters
+/// Main chart painter that orchestrates all modular painters.
+/// This follows the composite pattern, delegating to specialized painters.
+/// Now with clipping for zoomed content and sorted series for optimization.
 class WebbUIChartPainter extends CustomPainter {
   final List<ChartSeries> series;
   final ChartType chartType;
@@ -16,6 +17,7 @@ class WebbUIChartPainter extends CustomPainter {
   final double scale;
   final Offset panOffset;
   final BuildContext webbTheme;
+  final AxisType xAxisType; // Added
 
   // Modular painters
   late final ChartGridPainter _gridPainter;
@@ -33,12 +35,21 @@ class WebbUIChartPainter extends CustomPainter {
     required this.scale,
     required this.panOffset,
     required this.webbTheme,
+    this.xAxisType = AxisType.numeric,
   }) {
-    _gridPainter = ChartGridPainter(config: config, webbTheme: webbTheme);
+    _gridPainter = ChartGridPainter(
+      config: config,
+      webbTheme: webbTheme,
+      xAxisType: xAxisType,
+    );
     _tooltipPainter = ChartTooltipPainter(webbTheme: webbTheme);
     
     // Pre-calculate expensive operations
-    _bounds = ChartBounds.calculate(series: series, chartType: chartType);
+    _bounds = ChartBounds.calculate(
+      series: series,
+      chartType: chartType,
+      xAxisType: xAxisType,
+    );
   }
 
   @override
@@ -53,9 +64,13 @@ class WebbUIChartPainter extends CustomPainter {
       rightPadding: webbTheme.spacingGrid.spacing(2),
       topPadding: webbTheme.spacingGrid.spacing(2),
       bottomPadding: webbTheme.spacingGrid.spacing(4),
+      xAxisType: xAxisType,
     );
 
-    final visibleSeries = series.where((s) => s.visible).toList();
+    final visibleSeries = series
+        .where((s) => s.visible)
+        .map((s) => s.sorted()) // Sort for optimization
+        .toList();
     
     // Handle empty state
     if (visibleSeries.isEmpty || visibleSeries.every((s) => s.data.isEmpty)) {
@@ -63,22 +78,27 @@ class WebbUIChartPainter extends CustomPainter {
       return;
     }
 
+    // Clip to prevent overflow from zoom/pan
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
     // Handle pie/doughnut charts separately (they don't use grid/axes)
     if (chartType == ChartType.pie || chartType == ChartType.doughnut) {
       _drawPieOrDoughnutChart(canvas, visibleSeries);
-      return;
+    } else {
+      // Draw grid and axes for cartesian charts
+      _gridPainter.paint(canvas, size, _coordSystem);
+
+      // Draw all visible series
+      _drawSeries(canvas, visibleSeries);
     }
-
-    // Draw grid and axes for cartesian charts
-    _gridPainter.paint(canvas, size, _coordSystem);
-
-    // Draw all visible series
-    _drawSeries(canvas, visibleSeries);
 
     // Draw tooltip if needed
     if (tapPosition != null) {
       _drawTooltip(canvas, size);
     }
+
+    canvas.restore();
   }
 
   void _drawEmptyState(Canvas canvas, Size size) {
@@ -102,23 +122,24 @@ class WebbUIChartPainter extends CustomPainter {
   }
 
   void _drawSeries(Canvas canvas, List<ChartSeries> visibleSeries) {
-    for (final series in visibleSeries) {
-      final painter = ChartSeriesPainterFactory.getPainter(series.chartType);
-      painter.paint(canvas, _coordSystem, series, config);
-    }
+    // For stacked, pass all series to painter for accumulation
+    final painter = ChartSeriesPainterFactory.getPainter(chartType);
+    painter.paint(
+        canvas, _coordSystem, visibleSeries, config); // Changed to pass list
   }
 
   void _drawPieOrDoughnutChart(Canvas canvas, List<ChartSeries> visibleSeries) {
     // Pie charts use only the first visible series
     if (visibleSeries.isNotEmpty) {
       final painter = ChartSeriesPainterFactory.getPainter(chartType);
-      painter.paint(canvas, _coordSystem, visibleSeries.first, config);
+      painter.paint(
+          canvas, _coordSystem, [visibleSeries.first], config); // Pass as list
     }
   }
 
   void _drawTooltip(Canvas canvas, Size size) {
     final nearest = _coordSystem.findNearestPoint(tapPosition!, series);
-    
+
     if (nearest.point != null && nearest.distance < 30) {
       _tooltipPainter.paint(
         canvas,
@@ -126,7 +147,7 @@ class WebbUIChartPainter extends CustomPainter {
         _coordSystem,
         tapPosition!,
         nearest.point,
-        nearest.series,
+        series, // Pass full series list
       );
     }
   }
@@ -138,6 +159,7 @@ class WebbUIChartPainter extends CustomPainter {
         config != oldDelegate.config ||
         tapPosition != oldDelegate.tapPosition ||
         scale != oldDelegate.scale ||
-        panOffset != oldDelegate.panOffset;
+        panOffset != oldDelegate.panOffset ||
+        xAxisType != oldDelegate.xAxisType;
   }
 }

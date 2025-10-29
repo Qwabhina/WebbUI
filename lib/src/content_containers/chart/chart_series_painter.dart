@@ -1,169 +1,292 @@
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'chart_definitions.dart';
 import 'chart_coordinate_system.dart';
 
-/// Base class for all series painters - uses strategy pattern for different chart types
+/// Base class for all series painters - uses strategy pattern for different chart types.
+/// Now painters take list of series for stacked/grouped rendering.
 abstract class ChartSeriesPainter {
   void paint(
     Canvas canvas,
     ChartCoordinateSystem coordSystem,
-    ChartSeries series,
+    List<ChartSeries> series, // Changed to list for multi-series handling
     ChartConfig config,
   );
 }
 
-/// Paints line charts with optional data points
+/// Paints line charts with optional data points.
 class LineSeriesPainter implements ChartSeriesPainter {
   @override
   void paint(
     Canvas canvas,
     ChartCoordinateSystem coordSystem,
-    ChartSeries series,
+    List<ChartSeries> series,
     ChartConfig config,
   ) {
-    final paint = Paint()
-      ..color = series.color
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
+    for (final s in series) {
+      final paint = Paint()
+        ..color = s.color
+        ..strokeWidth = 2.5
+        ..style = PaintingStyle.stroke;
 
-    final path = Path();
-    final points = <Offset>[];
+      final path = Path();
+      final points = <Offset>[];
 
-    // Create path and collect points
-    for (int i = 0; i < series.data.length; i++) {
-      final p = series.data[i];
-      final x = coordSystem.getPixelX(p.x);
-      final y = coordSystem.getPixelY(p.y);
-      points.add(Offset(x, y));
+      // Create path and collect points
+      for (int i = 0; i < s.data.length; i++) {
+        final p = s.data[i];
+        final x = coordSystem.getPixelX(p.x);
+        final y = coordSystem.getPixelY(p.y);
+        points.add(Offset(x, y));
 
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
+        if (i == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
       }
-    }
 
-    // Draw the line
-    canvas.drawPath(path, paint);
+      // Draw the line
+      canvas.drawPath(path, paint);
 
-    // Draw data points
-    for (final point in points) {
-      canvas.drawCircle(point, 3, Paint()..color = series.color);
+      // Draw data points
+      for (final point in points) {
+        canvas.drawCircle(point, 3, Paint()..color = s.color);
+      }
     }
   }
 }
 
-/// Paints area charts (line with filled area below)
+/// Paints area charts (line with filled area below).
 class AreaSeriesPainter implements ChartSeriesPainter {
   @override
   void paint(
     Canvas canvas,
     ChartCoordinateSystem coordSystem,
-    ChartSeries series,
+    List<ChartSeries> series,
     ChartConfig config,
   ) {
-    // First draw the line
-    LineSeriesPainter().paint(canvas, coordSystem, series, config);
+    for (final s in series) {
+      // First draw the line
+      LineSeriesPainter().paint(canvas, coordSystem, [s], config);
 
-    // Then fill the area
-    final paint = Paint()..color = series.color.withOpacity(0.3);
-    final path = Path();
+      // Then fill the area, handling negatives
+      final paint = Paint()..color = s.color.withOpacity(0.3);
+      final path = Path();
 
-    if (series.data.isNotEmpty) {
-      // Start at first point's x position at y=0
-      path.moveTo(
-        coordSystem.getPixelX(series.data.first.x),
-        coordSystem.getPixelY(0),
-      );
-
-      // Draw line through all data points
-      for (final p in series.data) {
-        path.lineTo(
-          coordSystem.getPixelX(p.x),
-          coordSystem.getPixelY(p.y),
+      if (s.data.isNotEmpty) {
+        final y0 = coordSystem.getPixelY(0); // Baseline at 0
+        path.moveTo(
+          coordSystem.getPixelX(s.data.first.x),
+          y0,
         );
+
+        for (final p in s.data) {
+          path.lineTo(
+            coordSystem.getPixelX(p.x),
+            coordSystem.getPixelY(p.y),
+          );
+        }
+
+        path.lineTo(
+          coordSystem.getPixelX(s.data.last.x),
+          y0,
+        );
+        path.close();
+
+        canvas.drawPath(path, paint);
       }
-
-      // Close the path back to y=0 at the last point
-      path.lineTo(
-        coordSystem.getPixelX(series.data.last.x),
-        coordSystem.getPixelY(0),
-      );
-      path.close();
-
-      canvas.drawPath(path, paint);
     }
   }
 }
 
-/// Paints column/bar charts
+/// Paints column/bar charts with grouping for multi-series.
+/// Assumes all series have aligned x-values and similar lengths; otherwise, bars may misalign.
 class ColumnSeriesPainter implements ChartSeriesPainter {
   @override
   void paint(
     Canvas canvas,
     ChartCoordinateSystem coordSystem,
-    ChartSeries series,
+    List<ChartSeries> series,
     ChartConfig config,
   ) {
-    final paint = Paint()..color = series.color;
-    final barWidth = coordSystem.chartAreaSize.width / (series.data.length * 2);
+    if (series.isEmpty) return;
 
-    for (final p in series.data) {
-      final x = coordSystem.getPixelX(p.x);
-      final y = coordSystem.getPixelY(p.y);
-      final y0 = coordSystem.getPixelY(0);
+    final numSeries = series.length;
+    final groupWidth =
+        coordSystem.chartAreaSize.width / series.first.data.length;
+    final barWidth = groupWidth / (numSeries + 1); // Space between groups
 
-      canvas.drawRect(
-        Rect.fromLTRB(x - barWidth / 2, y, x + barWidth / 2, y0),
-        paint,
-      );
+    for (int i = 0; i < series.first.data.length; i++) {
+      for (int j = 0; j < numSeries; j++) {
+        final s = series[j];
+        if (i >= s.data.length) continue;
+        final p = s.data[i];
+        final paint = Paint()..color = s.color;
+
+        final groupX = coordSystem.getPixelX(p.x);
+        final x = groupX - groupWidth / 2 + barWidth * (j + 0.5);
+        final y = coordSystem.getPixelY(p.y);
+        final yBase = coordSystem.getPixelY(
+            p.y < 0 ? coordSystem.bounds.maxY : 0); // Handle negatives
+
+        canvas.drawRect(
+          Rect.fromLTRB(x - barWidth / 2, math.min(y, yBase), x + barWidth / 2,
+              math.max(y, yBase)),
+          paint,
+        );
+      }
     }
   }
 }
 
-/// Paints pie/doughnut charts
-class PieSeriesPainter implements ChartSeriesPainter {
+/// Paints stacked column charts, supporting negatives.
+/// Assumes all series have aligned x-values; otherwise, stacks may be incomplete.
+class StackedColumnPainter implements ChartSeriesPainter {
   @override
   void paint(
     Canvas canvas,
     ChartCoordinateSystem coordSystem,
-    ChartSeries series,
+    List<ChartSeries> series,
     ChartConfig config,
   ) {
-    final center = Offset(
-      coordSystem.size.width / 2,
-      coordSystem.size.height / 2,
-    );
-    final radius = min(coordSystem.size.width, coordSystem.size.height) / 3;
-    final total = series.data.fold<double>(0, (sum, p) => sum + p.y);
+    if (series.isEmpty) return;
 
+    final Map<dynamic, double> posStacks = {};
+    final Map<dynamic, double> negStacks = {};
+
+    for (final s in series) {
+      for (final p in s.data) {
+        final paint = Paint()..color = s.color;
+        final x = coordSystem.getPixelX(p.x);
+        final barWidth = coordSystem.chartAreaSize.width / (s.data.length * 2);
+
+        double yStart;
+        if (p.y >= 0) {
+          yStart = posStacks[p.x] ?? 0;
+          posStacks[p.x] = yStart + p.y;
+        } else {
+          yStart = negStacks[p.x] ?? 0;
+          negStacks[p.x] = yStart + p.y;
+        }
+
+        final yTop = coordSystem.getPixelY(yStart + p.y);
+        final yBottom = coordSystem.getPixelY(yStart);
+
+        canvas.drawRect(
+          Rect.fromLTRB(x - barWidth / 2, yTop, x + barWidth / 2, yBottom),
+          paint,
+        );
+      }
+    }
+  }
+}
+
+/// Paints stacked area charts.
+/// Fixed path reversal by collecting baseline points and traversing in reverse.
+class StackedAreaPainter implements ChartSeriesPainter {
+  @override
+  void paint(
+    Canvas canvas,
+    ChartCoordinateSystem coordSystem,
+    List<ChartSeries> series,
+    ChartConfig config,
+  ) {
+    // Implementation similar to stacked column but with paths
+    final Map<dynamic, double> stacks = {};
+
+    for (final s in series.reversed) {
+      // Draw from bottom to top
+      final paint = Paint()..color = s.color.withOpacity(0.3);
+      final linePaint = Paint()
+        ..color = s.color
+        ..strokeWidth = 2.5
+        ..style = PaintingStyle.stroke;
+
+      final path = Path();
+      final baselineOffsets = <Offset>[]; // Collect baselines for reversal
+
+      if (s.data.isNotEmpty) {
+        // Start at baseline (previous stack)
+        final firstBaseline = Offset(
+          coordSystem.getPixelX(s.data.first.x),
+          coordSystem.getPixelY(stacks[s.data.first.x] ?? 0),
+        );
+        path.moveTo(firstBaseline.dx, firstBaseline.dy);
+        baselineOffsets.add(firstBaseline);
+
+        for (final p in s.data) {
+          final stackY = stacks[p.x] ?? 0;
+          final newY = stackY + p.y;
+          stacks[p.x] = newY;
+          path.lineTo(
+            coordSystem.getPixelX(p.x),
+            coordSystem.getPixelY(newY),
+          );
+          baselineOffsets.add(Offset(
+            coordSystem.getPixelX(p.x),
+            coordSystem.getPixelY(stackY),
+          ));
+        }
+
+        // Close path by traversing baselines in reverse
+        for (final offset in baselineOffsets.reversed) {
+          path.lineTo(offset.dx, offset.dy);
+        }
+        path.close();
+
+        canvas.drawPath(path, paint);
+        canvas.drawPath(path, linePaint); // Optional line on top
+      }
+    }
+  }
+}
+
+/// Paints pie/doughnut charts.
+class PieSeriesPainter implements ChartSeriesPainter {
+  @override
+  void paint(Canvas canvas, ChartCoordinateSystem coordSystem,
+      List<ChartSeries> series, ChartConfig config) {
+    if (series.isEmpty) return;
+    final s = series.first; // Merge if multi-series needed: fold all data
+    final center =
+        Offset(coordSystem.size.width / 2, coordSystem.size.height / 2);
+    final radius =
+        math.min(coordSystem.size.width, coordSystem.size.height) / 3;
+    final total = s.data.fold<double>(0, (sum, p) => sum + p.y.abs());
     if (total == 0) return;
 
-    double startAngle = -pi / 2;
+    double startAngle = -math.pi / 2;
+    const labelStyle =
+        TextStyle(color: Colors.black, fontSize: 12); // Use theme
 
-    for (final p in series.data) {
-      final sweepAngle = (p.y / total) * 2 * pi;
+    for (final p in s.data) {
+      final sweepAngle = (p.y.abs() / total) * 2 * math.pi;
       final paint = Paint()
-        ..color = _getSegmentColor(series.color, series.data.indexOf(p));
+        ..color = _getSegmentColor(s.color, s.data.indexOf(p));
 
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        true,
-        paint,
-      );
+      canvas.drawArc(Rect.fromCircle(center: center, radius: radius),
+          startAngle, sweepAngle, true, paint);
+
+      // Add label at midpoint
+      final midAngle = startAngle + sweepAngle / 2;
+      final labelOffset = center +
+          Offset(
+              math.cos(midAngle) * radius / 2, math.sin(midAngle) * radius / 2);
+      final textPainter = TextPainter(
+          text: TextSpan(
+              text: p.label ?? p.y.toStringAsFixed(0), style: labelStyle),
+          textDirection: TextDirection.ltr);
+      textPainter.layout();
+      textPainter.paint(canvas,
+          labelOffset - Offset(textPainter.width / 2, textPainter.height / 2));
+
       startAngle += sweepAngle;
     }
 
-    // Draw doughnut hole if needed
-    if (series.chartType == ChartType.doughnut) {
-      canvas.drawCircle(
-        center,
-        radius * 0.5,
-        Paint()..color = Colors.white, // Should use theme background
-      );
+    if (s.chartType == ChartType.doughnut) {
+      canvas.drawCircle(center, radius * 0.5,
+          Paint()..color = Colors.white); // Inner circle for doughnut
     }
   }
 
@@ -175,7 +298,8 @@ class PieSeriesPainter implements ChartSeriesPainter {
   }
 }
 
-/// Factory to get the appropriate painter for each chart type
+/// Factory to get the appropriate painter for each chart type.
+/// Updated for stacked types.
 class ChartSeriesPainterFactory {
   static ChartSeriesPainter getPainter(ChartType chartType) {
     switch (chartType) {
@@ -186,14 +310,14 @@ class ChartSeriesPainterFactory {
       case ChartType.column:
       case ChartType.bar:
         return ColumnSeriesPainter();
+      case ChartType.stackedArea:
+        return StackedAreaPainter();
+      case ChartType.stackedColumn:
+      case ChartType.stackedBar:
+        return StackedColumnPainter();
       case ChartType.pie:
       case ChartType.doughnut:
         return PieSeriesPainter();
-      case ChartType.stackedArea:
-      case ChartType.stackedBar:
-      case ChartType.stackedColumn:
-        // For simplicity, returning basic painters - would need specialized ones
-        return ColumnSeriesPainter();
     }
   }
 }

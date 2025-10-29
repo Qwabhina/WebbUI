@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 /// Represents a single data point in a series.
 class ChartData {
-  final dynamic x;
+  final dynamic x; // Can be num, DateTime, or String for category
   final double y;
   final String? label; // Optional label for tooltips
 
@@ -23,6 +23,7 @@ class ChartData {
 }
 
 /// Represents a series of data to be plotted on the chart.
+/// Now includes sorting in constructor for optimized searches.
 class ChartSeries {
   final String name;
   final List<ChartData> data;
@@ -30,13 +31,29 @@ class ChartSeries {
   final ChartType chartType;
   final bool visible; // Series-level visibility
 
-  const ChartSeries({
+  ChartSeries({
     required this.name,
     required this.data,
     required this.color,
     this.chartType = ChartType.line,
     this.visible = true,
-  });
+  }) : assert(
+            data.isEmpty ||
+                data.every((p) => p.x.runtimeType == data.first.x.runtimeType),
+            'All x values in a series must be of the same type.');
+
+  /// Sorts data by x if not already sorted, for binary search optimization.
+  ChartSeries sorted() {
+    final sortedData = List<ChartData>.from(data)
+      ..sort((a, b) {
+        if (a.x is num && b.x is num) return (a.x as num).compareTo(b.x as num);
+        if (a.x is DateTime && b.x is DateTime) {
+          return (a.x as DateTime).compareTo(b.x as DateTime);
+        }
+        return 0; // Categories assumed pre-ordered
+      });
+    return copyWith(data: sortedData);
+  }
 
   ChartSeries copyWith({
     String? name,
@@ -96,6 +113,7 @@ enum LegendAlignment { start, center, end }
 enum TooltipBehavior { followCursor, fixed }
 
 // --- CHART CONFIGURATION ---
+
 class ChartConfig {
   final bool showGrid;
   final bool showAxes;
@@ -104,6 +122,7 @@ class ChartConfig {
   final LegendAlignment legendAlignment;
   final TooltipBehavior tooltipBehavior;
   final Duration animationDuration;
+  final int gridTickCount; // Added for configurable grid density
 
   const ChartConfig({
     this.showGrid = true,
@@ -113,6 +132,7 @@ class ChartConfig {
     this.legendAlignment = LegendAlignment.center,
     this.tooltipBehavior = TooltipBehavior.followCursor,
     this.animationDuration = const Duration(milliseconds: 300),
+    this.gridTickCount = 5, // Default tick count
   });
 
   ChartConfig copyWith({
@@ -123,6 +143,7 @@ class ChartConfig {
     LegendAlignment? legendAlignment,
     TooltipBehavior? tooltipBehavior,
     Duration? animationDuration,
+    int? gridTickCount,
   }) {
     return ChartConfig(
       showGrid: showGrid ?? this.showGrid,
@@ -132,30 +153,35 @@ class ChartConfig {
       legendAlignment: legendAlignment ?? this.legendAlignment,
       tooltipBehavior: tooltipBehavior ?? this.tooltipBehavior,
       animationDuration: animationDuration ?? this.animationDuration,
+      gridTickCount: gridTickCount ?? this.gridTickCount,
     );
   }
 }
 
 // --- CHART BOUNDS CALCULATION ---
 
-/// Calculates and stores the bounds (min/max values) for chart data
+/// Calculates and stores the bounds (min/max values) for chart data.
+/// Now supports category axes (x as strings mapped to indices) and negative y-values in stacked charts.
 class ChartBounds {
   final double minX;
   final double maxX;
   final double minY;
   final double maxY;
+  final List<String>? categories; // For category axis
 
   const ChartBounds({
     required this.minX,
     required this.maxX,
     required this.minY,
     required this.maxY,
+    this.categories,
   });
 
-  /// Calculates bounds for a list of series, considering chart type
+  /// Calculates bounds for a list of series, considering chart type and axis type.
   factory ChartBounds.calculate({
     required List<ChartSeries> series,
     required ChartType chartType,
+    required AxisType xAxisType,
   }) {
     final visibleSeries = series.where((s) => s.visible);
     if (visibleSeries.isEmpty || visibleSeries.every((s) => s.data.isEmpty)) {
@@ -166,24 +192,32 @@ class ChartBounds {
     double maxX = double.negativeInfinity;
     double minY = double.infinity;
     double maxY = double.negativeInfinity;
+    Set<String> categorySet = {}; // For collecting unique categories
 
     final bool isStacked = chartType.toString().contains('stacked');
-    final Map<dynamic, double> stackedTotals = {};
+    final Map<dynamic, double> stackedPosTotals = {};
+    final Map<dynamic, double> stackedNegTotals = {}; // For negative stacks
 
     for (final s in visibleSeries) {
       for (final p in s.data) {
-        // Convert x value to numeric representation
-        final double currentX = p.x is DateTime
-            ? (p.x as DateTime).millisecondsSinceEpoch.toDouble()
-            : (p.x as num).toDouble();
-
-        // Update x bounds
-        minX = minX < currentX ? minX : currentX;
-        maxX = maxX > currentX ? maxX : currentX;
+        // Handle x based on type
+        if (xAxisType == AxisType.category) {
+          categorySet.add(p.x.toString());
+        } else {
+          final double currentX = p.x is DateTime
+              ? (p.x as DateTime).millisecondsSinceEpoch.toDouble()
+              : (p.x as num).toDouble();
+          minX = minX < currentX ? minX : currentX;
+          maxX = maxX > currentX ? maxX : currentX;
+        }
 
         // Update y bounds based on chart type
         if (isStacked) {
-          stackedTotals[p.x] = (stackedTotals[p.x] ?? 0) + p.y;
+          if (p.y >= 0) {
+            stackedPosTotals[p.x] = (stackedPosTotals[p.x] ?? 0) + p.y;
+          } else {
+            stackedNegTotals[p.x] = (stackedNegTotals[p.x] ?? 0) + p.y;
+          }
         } else {
           minY = minY < p.y ? minY : p.y;
           maxY = maxY > p.y ? maxY : p.y;
@@ -191,10 +225,30 @@ class ChartBounds {
       }
     }
 
-    // Handle stacked chart bounds
-    if (isStacked && stackedTotals.isNotEmpty) {
-      minY = 0; // Stacked charts typically start at 0
-      maxY = stackedTotals.values.reduce((a, b) => a > b ? a : b);
+    // Handle category x
+    if (xAxisType == AxisType.category) {
+      final List<String> categories = categorySet.toList();
+      minX = 0;
+      maxX = categories.length - 1.toDouble();
+      return ChartBounds(
+        minX: minX,
+        maxX: maxX,
+        minY: minY,
+        maxY: maxY,
+        categories: categories,
+      );
+    }
+
+    // Handle stacked chart bounds, supporting negatives
+    if (isStacked) {
+      if (stackedPosTotals.isNotEmpty) {
+        maxY = stackedPosTotals.values.reduce((a, b) => a > b ? a : b);
+      }
+      if (stackedNegTotals.isNotEmpty) {
+        minY = stackedNegTotals.values.reduce((a, b) => a < b ? a : b);
+      }
+      minY = minY < 0 ? minY : 0;
+      maxY = maxY > 0 ? maxY : 0;
     }
 
     // Ensure valid ranges with padding
@@ -203,14 +257,13 @@ class ChartBounds {
     if (minY == double.infinity) minY = 0;
     if (maxY == double.negativeInfinity) maxY = 1;
 
-    // Add padding to bounds
     final xRange = maxX - minX;
     final yRange = maxY - minY;
 
     return ChartBounds(
       minX: minX - xRange * 0.05,
       maxX: maxX + xRange * 0.05,
-      minY: minY,
+      minY: minY - yRange * 0.05, // Added padding for minY
       maxY: maxY + yRange * 0.1,
     );
   }

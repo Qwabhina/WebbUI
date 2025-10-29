@@ -1,171 +1,272 @@
-import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'chart.dart';
+import 'dart:math' as math;
 
-/// An example screen that demonstrates how to use the WebbUIChart widget.
-class ChartShowcaseScreen extends StatefulWidget {
-  const ChartShowcaseScreen({super.key});
+import 'package:webb_ui/webb_ui.dart'
+    show
+        AxisType,
+        ChartConfig,
+        ChartData,
+        ChartSeries,
+        ChartType,
+        LegendPosition,
+        WebbUIChart;
 
-  @override
-  State<ChartShowcaseScreen> createState() => _ChartShowcaseScreenState();
-}
-
-class _ChartShowcaseScreenState extends State<ChartShowcaseScreen> {
-  late List<ChartSeries> _seriesData;
-  ChartType _currentChartType = ChartType.line;
-  bool _showLegends = true;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _seriesData = _generateSampleData();
-    _startLiveData();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  /// Generates initial sample data for the chart.
-  List<ChartSeries> _generateSampleData() {
-    final random = Random();
-    return [
-      ChartSeries(
-        name: 'Product A',
-        color: Colors.cyan,
-        chartType: _currentChartType,
-        data: List.generate(
-            8, (index) => ChartData(index + 1, random.nextDouble() * 100 + 50)),
-      ),
-      ChartSeries(
-        name: 'Product B',
-        color: Colors.amber,
-        chartType: _currentChartType,
-        data: List.generate(
-            8, (index) => ChartData(index + 1, random.nextDouble() * 80 + 30)),
-      ),
-      if (_currentChartType.name.contains('stacked'))
-        ChartSeries(
-          name: 'Product C',
-          color: Colors.pinkAccent,
-          chartType: _currentChartType,
-          data: List.generate(8,
-              (index) => ChartData(index + 1, random.nextDouble() * 60 + 20)),
-        ),
-    ];
-  }
-
-  /// Simulates live data updates every 2 seconds.
-  void _startLiveData() {
-    _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      final random = Random();
-      setState(() {
-        for (var series in _seriesData) {
-          if (series.data.isNotEmpty) {
-            final lastX = series.data.last.x;
-            series.data.removeAt(0);
-            series.data.add(ChartData(
-                lastX + 1,
-                random.nextDouble() * 100 +
-                    (series.name == 'Product A' ? 50 : 30)));
-          }
-        }
-      });
-    });
-  }
-
-  /// Handles changing the chart type from the UI.
-  void _onChartTypeChanged(ChartType? type) {
-    if (type != null) {
-      _timer?.cancel();
-      setState(() {
-        _currentChartType = type;
-        _seriesData = _generateSampleData();
-      });
-      _startLiveData();
-    }
-  }
+class ChartShowcase extends StatelessWidget {
+  const ChartShowcase({super.key});
 
   @override
   Widget build(BuildContext context) {
-    bool isPieChart = _currentChartType == ChartType.pie ||
-        _currentChartType == ChartType.doughnut;
+    return MaterialApp(
+      title: 'Chart Module Showcase',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const ChartShowcaseScreen(),
+    );
+  }
+}
 
+class ChartShowcaseScreen extends StatelessWidget {
+  const ChartShowcaseScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('WebbUIChart Showcase'),
-        elevation: 4,
-        backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
-      ),
-      body: Column(
+      appBar: AppBar(title: const Text('Chart Module Showcase')),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
         children: [
-          // Chart Widget
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: WebbUIChart(
-                series: _seriesData,
-                chartType: _currentChartType,
-                xAxisType: isPieChart ? null : AxisType.numeric,
-                yAxisType: isPieChart ? null : AxisType.numeric,
-                showLegends: _showLegends,
-                // Unique key to force recreation when chart type changes
-                key: ValueKey(_currentChartType),
+          _buildSectionTitle('1. Line Chart (Numeric Axis)'),
+          _buildChartContainer(
+            WebbUIChart(
+              series: _generateNumericSeries(),
+              chartType: ChartType.line,
+              xAxisType: AxisType.numeric,
+              interactive: true,
+              showLegends: true,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          _buildSectionTitle('2. Area Chart (DateTime Axis)'),
+          _buildChartContainer(
+            WebbUIChart(
+              series: _generateDateTimeSeries(),
+              chartType: ChartType.area,
+              xAxisType: AxisType.dateTime,
+              interactive: true,
+              config: const ChartConfig(showGrid: false),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          _buildSectionTitle('3. Column Chart (Category Axis, Multi-Series)'),
+          _buildChartContainer(
+            WebbUIChart(
+              series: _generateCategorySeries(),
+              chartType: ChartType.column,
+              xAxisType: AxisType.category,
+              interactive: true,
+              showLegends: true,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildSectionTitle('4. Stacked Column Chart (With Negatives)'),
+          _buildChartContainer(
+            WebbUIChart(
+              series: _generateStackedSeriesWithNegatives(),
+              chartType: ChartType.stackedColumn,
+              xAxisType: AxisType.numeric,
+              interactive: true,
+              showLegends: true,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          _buildSectionTitle('5. Stacked Area Chart'),
+          _buildChartContainer(
+            WebbUIChart(
+              series: _generateStackedSeries(),
+              chartType: ChartType.stackedArea,
+              xAxisType: AxisType.numeric,
+              interactive: true,
+              showLegends: true,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          _buildSectionTitle('6. Pie Chart'),
+          _buildChartContainer(
+            WebbUIChart(
+              series: _generatePieSeries(),
+              chartType: ChartType.pie,
+              interactive: false, // No zoom/pan for circular
+              showLegends: true,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          _buildSectionTitle('7. Doughnut Chart'),
+          _buildChartContainer(
+            WebbUIChart(
+              series: _generatePieSeries(),
+              chartType: ChartType.doughnut,
+              interactive: false,
+              showLegends: true,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildSectionTitle('8. Bar Chart (Horizontal, Custom Config)'),
+          _buildChartContainer(
+            WebbUIChart(
+              series: _generateNumericSeries(),
+              chartType: ChartType.bar,
+              xAxisType: AxisType.numeric,
+              interactive: true,
+              config: const ChartConfig(
+                legendPosition: LegendPosition.top,
+                showLabels: false,
+                gridTickCount: 10,
               ),
             ),
           ),
-          // Controls Section
-          _buildControls(),
+          const SizedBox(height: 20),
+
+          _buildSectionTitle('9. Empty State Handling'),
+          _buildChartContainer(
+            const WebbUIChart(
+              series: [],
+              chartType: ChartType.line,
+              emptyStateText: 'Custom Empty Message',
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildSectionTitle('10. Data Point Tap Callback'),
+          _buildChartContainer(
+            WebbUIChart(
+              series: _generateNumericSeries(),
+              chartType: ChartType.line,
+              interactive: true,
+              onDataPointTapped: (point) {
+                if (point != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Tapped: X=${point.x}, Y=${point.y}')),
+                  );
+                }
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
-  /// Builds the control panel for changing chart settings.
-  Widget _buildControls() {
-    return Card(
-      color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
-      margin: const EdgeInsets.all(8.0),
-      elevation: 5,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Wrap(
-          spacing: 12.0,
-          runSpacing: 8.0,
-          alignment: WrapAlignment.center,
-          children: [
-            DropdownButton<ChartType>(
-              value: _currentChartType,
-              dropdownColor: Theme.of(context).colorScheme.surface,
-              onChanged: _onChartTypeChanged,
-              items: ChartType.values.map((ChartType type) {
-                return DropdownMenuItem<ChartType>(
-                  value: type,
-                  child: Text(type.name),
-                );
-              }).toList(),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Show Legends'),
-                Switch(
-                  value: _showLegends,
-                  onChanged: (value) {
-                    setState(() {
-                      _showLegends = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
+  }
+
+  Widget _buildChartContainer(Widget chart) {
+    return Container(
+      height: 300,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: chart,
+    );
+  }
+
+  // Sample Data Generators
+
+  List<ChartSeries> _generateNumericSeries() {
+    final random = math.Random();
+    return [
+      ChartSeries(
+        name: 'Series 1',
+        color: Colors.blue,
+        data: List.generate(
+            10, (i) => ChartData(i + 1, random.nextDouble() * 100)),
+      ),
+      ChartSeries(
+        name: 'Series 2',
+        color: Colors.green,
+        data: List.generate(
+            10, (i) => ChartData(i + 1, random.nextDouble() * 100)),
+      ),
+    ];
+  }
+
+  List<ChartSeries> _generateDateTimeSeries() {
+    final now = DateTime.now();
+    final random = math.Random();
+    return [
+      ChartSeries(
+        name: 'Daily Data',
+        color: Colors.red,
+        data: List.generate(
+            7,
+            (i) => ChartData(
+                now.subtract(Duration(days: 6 - i)), random.nextDouble() * 50)),
+      ),
+    ];
+  }
+
+  List<ChartSeries> _generateCategorySeries() {
+    final categories = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
+    final random = math.Random();
+    return [
+      ChartSeries(
+        name: 'Sales A',
+        color: Colors.orange,
+        data: categories
+            .map((cat) => ChartData(cat, random.nextDouble() * 200))
+            .toList(),
+      ),
+      ChartSeries(
+        name: 'Sales B',
+        color: Colors.purple,
+        data: categories
+            .map((cat) => ChartData(cat, random.nextDouble() * 200))
+            .toList(),
+      ),
+    ];
+  }
+
+  List<ChartSeries> _generateStackedSeries() {
+    final random = math.Random();
+    return List.generate(
+        3,
+        (j) => ChartSeries(
+              name: 'Stack $j',
+              color: Colors.primaries[j * 3],
+              data: List.generate(
+                  5, (i) => ChartData(i + 1, random.nextDouble() * 50 + 10)),
+            ));
+  }
+
+  List<ChartSeries> _generateStackedSeriesWithNegatives() {
+    final random = math.Random();
+    return List.generate(
+        3,
+        (j) => ChartSeries(
+              name: 'Stack $j',
+              color: Colors.primaries[j * 3],
+              data: List.generate(5,
+                  (i) => ChartData(i + 1, (random.nextDouble() - 0.5) * 100)),
+            ));
+  }
+
+  List<ChartSeries> _generatePieSeries() {
+    final random = math.Random();
+    return [
+      ChartSeries(
+        name: 'Pie Data',
+        color: Colors.blue,
+        data: List.generate(
+            5, (i) => ChartData('Slice $i', random.nextDouble() * 100 + 20)),
+      ),
+    ];
   }
 }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'chart_definitions.dart';
 
-/// Interactive legend component for toggling series visibility
+/// Interactive legend component for toggling series visibility.
+/// Improved with scrollable support for many series and better alignment.
 class ChartLegend extends StatelessWidget {
   final List<ChartSeries> series;
   final Map<String, bool> visibility;
@@ -38,65 +39,84 @@ class ChartLegend extends StatelessWidget {
       );
     }
 
-    return Container(
-      padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
-      child: Wrap(
-        spacing: webbTheme.spacingGrid.spacing(2),
-        runSpacing: webbTheme.spacingGrid.spacing(1),
-        alignment: WrapAlignment.center,
-        children: series.map((seriesItem) {
-          final bool isVisible = visibility[seriesItem.name] ?? true;
+    // Use SingleChildScrollView for overflow
+    return SingleChildScrollView(
+      scrollDirection:
+          position == LegendPosition.left || position == LegendPosition.right
+              ? Axis.vertical
+              : Axis.horizontal,
+      child: Container(
+        padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
+        child: Wrap(
+          spacing: webbTheme.spacingGrid.spacing(2),
+          runSpacing: webbTheme.spacingGrid.spacing(1),
+          alignment: _getWrapAlignment(),
+          children: series.map((seriesItem) {
+            final bool isVisible = visibility[seriesItem.name] ?? true;
 
-          return Tooltip(
-            message: '${isVisible ? 'Hide' : 'Show'} ${seriesItem.name}',
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => onLegendTapped(seriesItem.name),
-                borderRadius: BorderRadius.circular(
-                  webbTheme.spacingGrid.baseSpacing,
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(0.5)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Color indicator
-                      Container(
-                        width: webbTheme.spacingGrid.spacing(1.5),
-                        height: webbTheme.spacingGrid.spacing(1.5),
-                        decoration: BoxDecoration(
-                          color: isVisible
-                              ? seriesItem.color
-                              : webbTheme.colorPalette.neutralDark
-                                  .withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(
-                            webbTheme.spacingGrid.baseSpacing / 2,
+            return Tooltip(
+              message: '${isVisible ? 'Hide' : 'Show'} ${seriesItem.name}',
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onLegendTapped(seriesItem.name),
+                  borderRadius: BorderRadius.circular(
+                    webbTheme.spacingGrid.baseSpacing,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(0.5)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Color indicator
+                        Container(
+                          width: webbTheme.spacingGrid.spacing(1.5),
+                          height: webbTheme.spacingGrid.spacing(1.5),
+                          decoration: BoxDecoration(
+                            color: isVisible
+                                ? seriesItem.color
+                                : webbTheme.colorPalette.neutralDark
+                                    .withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(
+                              webbTheme.spacingGrid.baseSpacing / 2,
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(width: webbTheme.spacingGrid.spacing(1)),
-                      // Series name
-                      Text(
-                        seriesItem.name,
-                        style: webbTheme.typography.labelMedium.copyWith(
-                          color: isVisible
-                              ? webbTheme.colorPalette.neutralDark
-                              : webbTheme.colorPalette.neutralDark
-                                  .withOpacity(0.5),
-                          decoration: isVisible
-                              ? TextDecoration.none
-                              : TextDecoration.lineThrough,
+                        SizedBox(width: webbTheme.spacingGrid.spacing(1)),
+                        // Series name
+                        Text(
+                          seriesItem.name,
+                          style: webbTheme.typography.labelMedium.copyWith(
+                            color: isVisible
+                                ? webbTheme.colorPalette.neutralDark
+                                : webbTheme.colorPalette.neutralDark
+                                    .withOpacity(0.5),
+                            decoration: isVisible
+                                ? TextDecoration.none
+                                : TextDecoration.lineThrough,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
+  }
+
+  /// Maps LegendAlignment to WrapAlignment.
+  WrapAlignment _getWrapAlignment() {
+    switch (alignment) {
+      case LegendAlignment.start:
+        return WrapAlignment.start;
+      case LegendAlignment.end:
+        return WrapAlignment.end;
+      default:
+        return WrapAlignment.center;
+    }
   }
 }

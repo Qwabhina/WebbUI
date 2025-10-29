@@ -57,56 +57,118 @@ TextTheme _buildTextTheme(WebbUITypography typography) {
   );
 }
 
-/// Helper to create a light theme with WebbUI defaults
-ThemeData webbUILightTheme({Color? seedColor}) {
-  const baseTypography = WebbUITypography.defaultTypography;
-  final palette = seedColor != null
-      ? WebbUIColorPalette.defaultPalette.copyWith(primary: seedColor)
-      : WebbUIColorPalette.defaultPalette;
+/// Helper to create a light theme with WebbUI defaults or custom overrides
+ThemeData webbUILightTheme({
+  Color? seedColor,
+  ColorScheme? customScheme,
+  WebbUIColorPalette? customPalette,
+  WebbUITypography? customTypography,
+  WebbUISpacingGrid? customSpacingGrid,
+  WebbUIIconTheme? customIconTheme,
+  WebbUIElevation? customElevation,
+  WebbUIInteractionStates? customInteractionStates,
+  WebbUIAccessibility? customAccessibility,
+}) {
+  // Generate or use provided ColorScheme
+  final scheme = customScheme ??
+      (seedColor != null
+          ? ColorScheme.fromSeed(
+              seedColor: seedColor,
+              brightness: Brightness.light,
+            )
+          : null);
+
+  // Derive or use custom palette
+  final palette = customPalette ??
+      (scheme != null
+          ? WebbUIColorPalette.fromColorScheme(scheme)
+          : WebbUIColorPalette.defaultPalette);
+
+  // Use custom or default for other extensions
+  final typography = customTypography ?? WebbUITypography.defaultTypography;
+  final spacingGrid = customSpacingGrid ?? WebbUISpacingGrid.defaultSpacingGrid;
+  final iconTheme = customIconTheme ?? WebbUIIconTheme.defaultIconTheme;
+  final elevation = customElevation ?? WebbUIElevation.defaultElevation;
+  final interactionStates =
+      customInteractionStates ?? WebbUIInteractionStates.defaultStates;
+  final accessibility =
+      customAccessibility ?? WebbUIAccessibility.defaultAccessibility;
 
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: palette.primary,
-      brightness: Brightness.light,
-    ),
-    textTheme: _buildTextTheme(baseTypography),
+    colorScheme: scheme ??
+        ColorScheme.fromSeed(
+          seedColor: palette.primary,
+          brightness: Brightness.light,
+        ),
+    textTheme: _buildTextTheme(typography),
     extensions: <ThemeExtension<dynamic>>[
       palette,
-      WebbUITypography.defaultTypography,
-      WebbUISpacingGrid.defaultSpacingGrid,
-      WebbUIIconTheme.defaultIconTheme,
-      WebbUIElevation.defaultElevation,
-      WebbUIInteractionStates.defaultStates,
-      WebbUIAccessibility.defaultAccessibility,
+      typography,
+      spacingGrid,
+      iconTheme,
+      elevation,
+      interactionStates,
+      accessibility,
     ],
   );
 }
 
-/// Helper to create a dark theme with WebbUI dark variants
-ThemeData webbUIDarkTheme({Color? seedColor}) {
-  const baseTypography = WebbUITypography.defaultTypography;
-  final palette = seedColor != null
-      ? WebbUIColorPalette.darkPalette.copyWith(primary: seedColor)
-      : WebbUIColorPalette.darkPalette;
+/// Helper to create a dark theme with WebbUI dark variants or custom overrides
+ThemeData webbUIDarkTheme({
+  Color? seedColor,
+  ColorScheme? customScheme,
+  WebbUIColorPalette? customPalette,
+  WebbUITypography? customTypography,
+  WebbUISpacingGrid? customSpacingGrid,
+  WebbUIIconTheme? customIconTheme,
+  WebbUIElevation? customElevation,
+  WebbUIInteractionStates? customInteractionStates,
+  WebbUIAccessibility? customAccessibility,
+}) {
+  // Generate or use provided ColorScheme
+  final scheme = customScheme ??
+      (seedColor != null
+          ? ColorScheme.fromSeed(
+              seedColor: seedColor,
+              brightness: Brightness.dark,
+            )
+          : null);
+
+  // Derive or use custom palette
+  final palette = customPalette ??
+      (scheme != null
+          ? WebbUIColorPalette.fromColorScheme(scheme)
+          : WebbUIColorPalette.darkPalette);
+
+  // Use custom or default for other extensions
+  final typography = customTypography ?? WebbUITypography.defaultTypography;
+  final spacingGrid = customSpacingGrid ?? WebbUISpacingGrid.defaultSpacingGrid;
+  final iconTheme = customIconTheme ?? WebbUIIconTheme.defaultDarkIconTheme;
+  final elevation = customElevation ?? WebbUIElevation.defaultElevation;
+  final interactionStates =
+      customInteractionStates ?? WebbUIInteractionStates.defaultDarkStates;
+  final accessibility =
+      customAccessibility ?? WebbUIAccessibility.defaultAccessibility;
 
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: palette.primary,
-      brightness: Brightness.dark,
-    ),
-    textTheme: _buildTextTheme(baseTypography),
+    colorScheme: scheme ??
+        ColorScheme.fromSeed(
+          seedColor: palette.primary,
+          brightness: Brightness.dark,
+        ),
+    textTheme: _buildTextTheme(typography),
     extensions: <ThemeExtension<dynamic>>[
       palette,
-      WebbUITypography.defaultTypography,
-      WebbUISpacingGrid.defaultSpacingGrid,
-      WebbUIIconTheme.defaultDarkIconTheme,
-      WebbUIElevation.defaultElevation,
-      WebbUIInteractionStates.defaultDarkStates,
-      WebbUIAccessibility.defaultAccessibility,
+      typography,
+      spacingGrid,
+      iconTheme,
+      elevation,
+      interactionStates,
+      accessibility,
     ],
   );
 }

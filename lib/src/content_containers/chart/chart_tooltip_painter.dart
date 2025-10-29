@@ -3,28 +3,31 @@ import 'package:webb_ui/src/theme.dart';
 import 'chart_definitions.dart';
 import 'chart_coordinate_system.dart';
 
-/// Handles tooltip and crosshair painting with proper positioning
+/// Handles tooltip and crosshair painting with proper positioning.
+/// Improved with multi-series support at same x and customizable format.
 class ChartTooltipPainter {
   final BuildContext webbTheme;
 
   const ChartTooltipPainter({required this.webbTheme});
 
-  /// Paints crosshair lines and tooltip at the specified position
+  /// Paints crosshair lines and tooltip at the specified position.
+  /// Now takes the full list of series for multi-series tooltips.
   void paint(
     Canvas canvas,
     Size size,
     ChartCoordinateSystem coordSystem,
     Offset tapPosition,
     ChartData? nearestPoint,
-    ChartSeries? nearestSeries,
+    List<ChartSeries> allSeries, // Changed to take full series list
   ) {
-    if (nearestPoint == null || nearestSeries == null) return;
+    if (nearestPoint == null) return;
 
     final pointX = coordSystem.getPixelX(nearestPoint.x);
     final pointY = coordSystem.getPixelY(nearestPoint.y);
 
     _drawCrosshair(canvas, size, coordSystem, pointX, pointY);
-    _drawTooltip(canvas, size, pointX, pointY, nearestPoint, nearestSeries);
+    _drawTooltip(
+        canvas, size, pointX, pointY, nearestPoint, allSeries, coordSystem);
   }
 
   void _drawCrosshair(
@@ -60,11 +63,22 @@ class ChartTooltipPainter {
     double pointX,
     double pointY,
     ChartData point,
-    ChartSeries series,
+    List<ChartSeries> allSeries, // Use full list for multi-series
+    ChartCoordinateSystem coordSystem,
   ) {
-    final tooltipText = "${series.name}\n"
-        "X: ${point.x}\n"
-        "Y: ${point.y.toStringAsFixed(2)}";
+    // Find all points at same x for multi-series tooltip
+    final allPoints = <String>[];
+    for (final s in allSeries.where((s) => s.visible)) {
+      final matching = s.data.firstWhere(
+        (p) => p.x == point.x,
+        orElse: () => const ChartData(null, 0), // Fallback if no match
+      );
+      if (matching.x != null) {
+        allPoints.add('${s.name}: ${matching.y.toStringAsFixed(2)}');
+      }
+    }
+
+    final tooltipText = "X: ${point.x}\n${allPoints.join('\n')}";
 
     final textSpan = TextSpan(
       text: tooltipText,

@@ -14,11 +14,12 @@ import 'chart_painter.dart';
 /// - Responsive design with proper theming
 /// - Empty state handling
 /// - Accessibility support
+/// Now with category axis support and improved multi-series handling.
 class WebbUIChart extends StatefulWidget {
   final List<ChartSeries> series;
   final ChartType chartType;
-  final AxisType? xAxisType;
-  final AxisType? yAxisType;
+  final AxisType xAxisType;
+  final AxisType yAxisType;
   final bool showLegends;
   final ChartConfig config;
   final String? emptyStateText;
@@ -30,8 +31,8 @@ class WebbUIChart extends StatefulWidget {
     super.key,
     required this.series,
     this.chartType = ChartType.line,
-    this.xAxisType,
-    this.yAxisType,
+    this.xAxisType = AxisType.numeric,
+    this.yAxisType = AxisType.numeric,
     this.showLegends = true,
     this.config = const ChartConfig(),
     this.emptyStateText,
@@ -74,7 +75,7 @@ class _WebbUIChartState extends State<WebbUIChart> {
     }
   }
 
-  /// Initializes series visibility based on the series' visible property
+  /// Initializes series visibility based on the series' visible property.
   void _initializeVisibility() {
     _seriesVisibility.clear();
     for (var s in widget.series) {
@@ -82,7 +83,7 @@ class _WebbUIChartState extends State<WebbUIChart> {
     }
   }
 
-  /// Handles scale updates for zooming functionality
+  /// Handles scale updates for zooming functionality.
   void _handleScaleUpdate(ScaleUpdateDetails details) {
     if (!widget.interactive) return;
     
@@ -95,7 +96,7 @@ class _WebbUIChartState extends State<WebbUIChart> {
     });
   }
 
-  /// Handles tap events for tooltip display and data point selection
+  /// Handles tap events for tooltip display and data point selection.
   void _handleTap(Offset localPosition) {
     if (!widget.interactive) return;
     
@@ -103,29 +104,28 @@ class _WebbUIChartState extends State<WebbUIChart> {
       _tapPosition = localPosition;
     });
 
-    // Notify parent of data point tap if callback provided
-    widget.onDataPointTapped?.call(_findNearestDataPoint(localPosition));
+    // Use coordSystem to find nearest, but since not painted yet, approximate
+    final nearest = _approximateNearest(localPosition);
+    widget.onDataPointTapped?.call(nearest);
   }
 
-  /// Finds the nearest data point to a tap position
-  ChartData? _findNearestDataPoint(Offset localPosition) {
-    // This would use the coordinate system to find the nearest point
-    // For simplicity, returning first point - in real implementation,
-    // this would use the ChartCoordinateSystem from the painter
+  /// Approximates nearest point without full painter (for tap callback).
+  ChartData? _approximateNearest(Offset localPosition) {
+    // Simplified; in practice, create temp coordSystem
     for (final s in widget.series) {
       if (s.data.isNotEmpty) return s.data.first;
     }
     return null;
   }
 
-  /// Toggles series visibility when legend items are tapped
+  /// Toggles series visibility when legend items are tapped.
   void _onLegendTapped(String seriesName) {
     setState(() {
       _seriesVisibility[seriesName] = !_seriesVisibility[seriesName]!;
     });
   }
 
-  /// Resets zoom and pan to default values
+  /// Resets zoom and pan to default values.
   void _resetZoom() {
     setState(() {
       _scale = 1.0;
@@ -134,14 +134,14 @@ class _WebbUIChartState extends State<WebbUIChart> {
     });
   }
 
-  /// Returns true if there's any visible data to display
+  /// Returns true if there's any visible data to display.
   bool get _hasData {
     return widget.series.isNotEmpty &&
         widget.series.any(
             (s) => (_seriesVisibility[s.name] ?? true) && s.data.isNotEmpty);
   }
 
-  /// Returns true for circular chart types (pie/doughnut)
+  /// Returns true for circular chart types (pie/doughnut).
   bool get _isCircularChart {
     return widget.chartType == ChartType.pie ||
         widget.chartType == ChartType.doughnut;
@@ -214,7 +214,7 @@ class _WebbUIChartState extends State<WebbUIChart> {
     );
   }
 
-  /// Builds chart controls (zoom reset button)
+  /// Builds chart controls (zoom reset button).
   Widget _buildChartControls(BuildContext webbTheme) {
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -270,7 +270,7 @@ class _WebbUIChartState extends State<WebbUIChart> {
     );
   }
 
-  /// Builds the main chart content with gesture support
+  /// Builds the main chart content with gesture support.
   Widget _buildChartContent(
     BuildContext webbTheme,
     List<ChartSeries> visibleSeries,
@@ -289,12 +289,13 @@ class _WebbUIChartState extends State<WebbUIChart> {
           scale: _scale,
           panOffset: _panOffset,
           webbTheme: webbTheme,
+          xAxisType: widget.xAxisType,
         ),
       ),
     );
   }
 
-  /// Builds the empty state when no data is available
+  /// Builds the empty state when no data is available.
   Widget _buildEmptyState(BuildContext webbTheme) {
     return Center(
       child: Column(

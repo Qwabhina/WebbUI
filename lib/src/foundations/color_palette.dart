@@ -35,7 +35,7 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
 
   /// Default light palette values, which can be overridden.
   static const WebbUIColorPalette defaultPalette = WebbUIColorPalette(
-    primary: Color(0xFF2196F3), // Blue for primary actions
+    primary: Color(0xFF5155ac), // Blue for primary actions
     secondary: Color(0xFF4CAF50), // Green for secondary
     neutralLight: Color(0xFFFFFFFF), // White for backgrounds
     neutralDark: Color(0xFF212121), // Dark gray for text
@@ -67,6 +67,26 @@ class WebbUIColorPalette extends ThemeExtension<WebbUIColorPalette> {
     onPrimary: Color(0xFF000000),
     onSurface: Color(0xFFE0E0E0),
   );
+
+  /// Factory to create a palette from a standard ColorScheme, mapping semantic colors.
+  /// Falls back to defaults for non-standard fields like success/warning/info.
+  factory WebbUIColorPalette.fromColorScheme(ColorScheme scheme) {
+    return WebbUIColorPalette(
+      primary: scheme.primary,
+      secondary: scheme.secondary,
+      neutralLight: scheme.surfaceBright,
+      neutralDark: scheme.onSurface,
+      neutral: scheme.surfaceContainerHighest,
+      success: scheme.tertiary,
+      warning: const Color(0xFFFFC107),
+      error: scheme.error,
+      info: scheme.primaryContainer,
+      surface: scheme.surface,
+      background: scheme.surface,
+      onPrimary: scheme.onPrimary,
+      onSurface: scheme.onSurface,
+    );
+  }
 
   @override
   WebbUIColorPalette copyWith({
