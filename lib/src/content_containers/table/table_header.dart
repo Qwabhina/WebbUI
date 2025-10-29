@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:webb_ui/src/theme.dart';
@@ -65,9 +66,12 @@ class WebbUITableHeader<T> extends StatelessWidget {
                       Icon(
                         isSorting
                             ? (isAscending
-                                ? Icons.arrow_upward
-                                : Icons.arrow_downward)
-                            : Icons.unfold_more,
+                                // ? Icons.arrow_upward
+                                ? FluentIcons.arrow_up_20_regular
+                                // : Icons.arrow_downward
+                                : FluentIcons.arrow_down_20_regular)
+                            // : Icons.unfold_more,
+                            : FluentIcons.more_vertical_20_regular,
                         size: webbTheme.iconTheme.smallSize,
                         color: isSorting
                             ? webbTheme.colorPalette.primary

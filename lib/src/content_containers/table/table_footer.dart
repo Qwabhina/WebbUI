@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:webb_ui/src/theme.dart';
@@ -48,8 +49,11 @@ class WebbUITableFooter<T> extends StatelessWidget {
             children: [
               // Previous Button
               IconButton(
-                icon: Icon(Icons.arrow_back_ios,
-                    size: webbTheme.iconTheme.smallSize),
+                icon: Icon(
+                  // Icons.arrow_back_ios,
+                  FluentIcons.chevron_left_20_regular,
+                  size: webbTheme.iconTheme.smallSize,
+                ),
                 onPressed:
                     isFirstPage ? null : () => state.setPage(currentPage - 1),
                 color: webbTheme.colorPalette.primary,
@@ -61,8 +65,11 @@ class WebbUITableFooter<T> extends StatelessWidget {
 
               // Next Button
               IconButton(
-                icon: Icon(Icons.arrow_forward_ios,
-                    size: webbTheme.iconTheme.smallSize),
+                icon: Icon(
+                  // Icons.arrow_forward_ios,
+                  FluentIcons.chevron_right_20_regular,
+                  size: webbTheme.iconTheme.smallSize,
+                ),
                 onPressed:
                     isLastPage ? null : () => state.setPage(currentPage + 1),
                 color: webbTheme.colorPalette.primary,
