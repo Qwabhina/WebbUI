@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/webb_ui.dart';
 
@@ -85,7 +86,8 @@ class WebbUIDropdown<T> extends StatelessWidget {
                 .withOpacity(disabled ? 0.5 : 1.0),
           ),
           icon: Icon(
-            Icons.arrow_drop_down,
+            // Icons.arrow_drop_down,
+            FluentIcons.chevron_down_20_regular,
             color: webbTheme.colorPalette.neutralDark
                 .withOpacity(disabled ? 0.5 : 1.0),
           ),
