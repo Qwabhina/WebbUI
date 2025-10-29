@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'package:webb_ui/src/content_containers/card.dart';
@@ -117,7 +118,8 @@ class _WebbUIAccordionState extends State<WebbUIAccordion>
                       RotationTransition(
                         turns: _rotationAnimation,
                         child: Icon(
-                          Icons.expand_more,
+                          // Icons.expand_more,
+                          FluentIcons.chevron_down_20_filled,
                           color: widget.disabled
                               ? webbTheme.interactionStates.disabledColor
                               : webbTheme.colorPalette.neutralDark,

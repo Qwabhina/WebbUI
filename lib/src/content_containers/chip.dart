@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 
@@ -58,7 +59,8 @@ class WebbUIChip extends StatelessWidget {
               borderRadius:
                   BorderRadius.circular(webbTheme.iconTheme.smallSize),
               child: Icon(
-                Icons.close,
+                // Icons.close,
+                FluentIcons.dismiss_20_regular,
                 size: webbTheme.iconTheme.smallSize,
                 color: foregroundColor.withOpacity(0.8),
               ),

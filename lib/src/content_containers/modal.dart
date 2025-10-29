@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/foundations/breakpoints.dart';
 import 'package:webb_ui/src/theme.dart';
@@ -187,7 +188,8 @@ class WebbUIModal extends StatelessWidget {
                       if (showCloseButton)
                         IconButton(
                           icon: Icon(
-                            Icons.close,
+                            // Icons.close,
+                            FluentIcons.dismiss_20_regular,
                             color: webbTheme.colorPalette.neutralDark
                                 .withOpacity(0.7),
                             size: webbTheme.iconTheme.mediumSize,
