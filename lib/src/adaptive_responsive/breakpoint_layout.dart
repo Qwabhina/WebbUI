@@ -29,10 +29,9 @@ class WebbUIBreakpointLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double width = MediaQuery.of(context).size.width;
-    final webbTheme = context;
 
     EdgeInsets getDefaultPadding() {
-      final double spacing = webbTheme.spacingGrid.spacing(2);
+      final double spacing = context.spacingGrid.spacing(2);
       return EdgeInsets.all(spacing);
     }
 

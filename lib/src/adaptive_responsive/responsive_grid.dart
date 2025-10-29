@@ -26,7 +26,6 @@ class WebbUIResponsiveGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final webbTheme = context;
     final double width = MediaQuery.of(context).size.width;
 
     int getCrossAxisCount() {
@@ -40,7 +39,7 @@ class WebbUIResponsiveGrid extends StatelessWidget {
     }
 
     return Padding(
-      padding: padding ?? EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
+      padding: padding ?? EdgeInsets.all(context.spacingGrid.spacing(1.5)),
       child: GridView.count(
         crossAxisCount: getCrossAxisCount(),
         childAspectRatio: childAspectRatio ?? 1.0,
