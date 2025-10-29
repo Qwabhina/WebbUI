@@ -10,6 +10,7 @@ environment:
 dependencies:
   bitsdojo_window: ^0.1.6
   file_picker: ^8.3.2
+  fluentui_system_icons: ^1.1.273
   flutter:
     sdk: flutter
   flutter_dropzone: ^4.2.1
