@@ -162,21 +162,20 @@ class _WebbUIStepperWizardState extends State<WebbUIStepperWizard>
 
   @override
   Widget build(BuildContext context) {
-    final webbTheme = context;
     final currentStep = widget.steps[_state.currentStep];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         // Progress Indicator
-WebbUIStepperProgress(
+        WebbUIStepperProgress(
           steps: widget.steps,
           state: _state,
           onStepTapped:
               widget.config.allowStepNavigation ? _handleStepTapped : null,
         ),
 
-        SizedBox(height: webbTheme.spacingGrid.spacing(2)),
+        SizedBox(height: context.spacingGrid.spacing(2)),
 
         // Step Content with Animation
         AnimatedSwitcher(
@@ -204,16 +203,16 @@ WebbUIStepperProgress(
         if (widget.config.showStepErrors &&
             _state.stepErrors[_state.currentStep] != null)
           Padding(
-            padding: EdgeInsets.only(top: webbTheme.spacingGrid.spacing(1)),
+            padding: EdgeInsets.only(top: context.spacingGrid.spacing(1)),
             child: Text(
               _state.stepErrors[_state.currentStep]!,
-              style: webbTheme.typography.labelMedium.copyWith(
-                color: webbTheme.colorPalette.error,
+              style: context.typography.labelMedium.copyWith(
+                color: context.colorPalette.error,
               ),
             ),
           ),
 
-        SizedBox(height: webbTheme.spacingGrid.spacing(2)),
+        SizedBox(height: context.spacingGrid.spacing(2)),
 
         // Navigation Buttons
         WebbUIStepperNavigation(

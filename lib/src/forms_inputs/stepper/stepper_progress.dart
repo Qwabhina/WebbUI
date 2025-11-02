@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'stepper_models.dart';
@@ -16,8 +17,7 @@ class WebbUIStepperProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final webbTheme = context;
-    final iconSize = webbTheme.iconTheme.mediumSize;
+    final iconSize = context.iconTheme.mediumSize;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -39,14 +39,14 @@ class WebbUIStepperProgress extends StatelessWidget {
               children: [
                 // Step Icon
                 _buildStepIcon(stepConfig, step.icon, iconSize),
-                SizedBox(height: webbTheme.spacingGrid.spacing(0.5)),
+                SizedBox(height: context.spacingGrid.spacing(0.5)),
                 // Step Title
-                _buildStepTitle(step.title, stepConfig, webbTheme),
+                _buildStepTitle(step.title, stepConfig, context),
                 // Optional Step Description
                 if (step.description != null) ...[
-                  SizedBox(height: webbTheme.spacingGrid.spacing(0.25)),
+                  SizedBox(height: context.spacingGrid.spacing(0.25)),
                   _buildStepDescription(
-                      step.description!, stepConfig, webbTheme),
+                      step.description!, stepConfig, context),
                 ],
               ],
             ),
@@ -62,18 +62,17 @@ class WebbUIStepperProgress extends StatelessWidget {
   }
 
   _StepConfig _getStepConfig(int index, BuildContext context) {
-    final webbTheme = context;
     
     if (state.stepCompleted[index]) {
-      return _StepConfig.completed(webbTheme);
+      return _StepConfig.completed(context);
     } else if (state.stepErrors[index] != null) {
-      return _StepConfig.error(webbTheme);
+      return _StepConfig.error(context);
     } else if (index == state.currentStep) {
-      return _StepConfig.active(webbTheme);
+      return _StepConfig.active(context);
     } else if (state.stepSkipped[index]) {
-      return _StepConfig.skipped(webbTheme);
+      return _StepConfig.skipped(context);
     } else {
-      return _StepConfig.inactive(webbTheme);
+      return _StepConfig.inactive(context);
     }
   }
 
@@ -86,10 +85,10 @@ class WebbUIStepperProgress extends StatelessWidget {
   }
 
   Widget _buildStepTitle(
-      String title, _StepConfig config, BuildContext webbTheme) {
+      String title, _StepConfig config, BuildContext context) {
     return Text(
       title,
-      style: webbTheme.typography.labelMedium.copyWith(
+      style: context.typography.labelMedium.copyWith(
         color: config.color,
         fontWeight: config.isActive ? FontWeight.w600 : FontWeight.normal,
       ),
@@ -98,10 +97,10 @@ class WebbUIStepperProgress extends StatelessWidget {
   }
 
   Widget _buildStepDescription(
-      String description, _StepConfig config, BuildContext webbTheme) {
+      String description, _StepConfig config, BuildContext context) {
     return Text(
       description,
-      style: webbTheme.typography.labelSmall.copyWith(
+      style: context.typography.labelSmall.copyWith(
         color: config.color.withOpacity(0.7),
       ),
       textAlign: TextAlign.center,
@@ -123,31 +122,36 @@ class _StepConfig {
   });
 
   factory _StepConfig.completed(BuildContext context) => _StepConfig(
-        icon: Icons.check_circle,
+        // icon: Icons.check_circle,
+        icon: FluentIcons.checkmark_20_regular,
         color: context.colorPalette.success,
         isActive: true,
       );
 
   factory _StepConfig.error(BuildContext context) => _StepConfig(
-        icon: Icons.error,
+        // icon: Icons.error,
+        icon: FluentIcons.error_circle_20_regular,
         color: context.colorPalette.error,
         isActive: true,
       );
 
   factory _StepConfig.active(BuildContext context) => _StepConfig(
-        icon: Icons.radio_button_checked,
+        // icon: Icons.radio_button_checked,
+        icon: FluentIcons.radio_button_20_regular,
         color: context.colorPalette.primary,
         isActive: true,
       );
 
   factory _StepConfig.skipped(BuildContext context) => _StepConfig(
-        icon: Icons.remove_circle_outline,
+        // icon: Icons.remove_circle_outline,
+        icon: FluentIcons.dismiss_circle_20_regular,
         color: context.interactionStates.disabledColor,
         isActive: false,
       );
 
   factory _StepConfig.inactive(BuildContext context) => _StepConfig(
-        icon: Icons.radio_button_unchecked,
+        // icon: Icons.radio_button_unchecked,
+        icon: FluentIcons.radio_button_20_regular,
         color: context.colorPalette.neutralDark.withOpacity(0.5),
         isActive: false,
       );

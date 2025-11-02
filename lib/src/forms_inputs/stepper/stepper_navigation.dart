@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/buttons_controls/buttons_controls.dart';
 import 'stepper_models.dart';
@@ -28,7 +29,9 @@ class WebbUIStepperNavigation extends StatelessWidget {
     final canProceed =
         WebbUIStepperValidation.isStepValid(state, state.currentStep) ||
             WebbUIStepperValidation.canSkipStep(
-                step: currentStep, context: context);
+              step: currentStep,
+              context: context,
+            );
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -39,7 +42,8 @@ class WebbUIStepperNavigation extends StatelessWidget {
             label: 'Previous',
             onPressed: onPrevious,
             variant: WebbUIButtonVariant.secondary,
-            icon: Icons.arrow_back,
+            // icon: Icons.arrow_back,
+            icon: FluentIcons.arrow_left_20_regular,
           )
         else
           const SizedBox(), // Spacer to maintain layout
@@ -51,7 +55,10 @@ class WebbUIStepperNavigation extends StatelessWidget {
           variant: isLastStep
               ? WebbUIButtonVariant.primary
               : WebbUIButtonVariant.secondary,
-          icon: isLastStep ? Icons.check : Icons.arrow_forward,
+          // icon: isLastStep ? Icons.check : Icons.arrow_forward,
+          icon: isLastStep
+              ? FluentIcons.check_20_regular
+              : FluentIcons.arrow_right_20_regular,
         ),
       ],
     );
