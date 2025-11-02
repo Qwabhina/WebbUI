@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'input_decoration.dart';
@@ -96,8 +97,10 @@ class _WebbUITextFieldState extends State<WebbUITextField> {
 
     final IconData iconData =
         widget.validationState == WebbUIValidationState.success
-        ? Icons.check_circle
-        : Icons.error;
+            // ? Icons.check_circle
+            ? FluentIcons.checkmark_circle_20_regular
+            // : Icons.error;
+            : FluentIcons.error_circle_20_regular;
 
     return Icon(
       iconData,

@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'input_decoration.dart';
@@ -72,7 +73,10 @@ class _WebbUIPasswordFieldState extends State<WebbUIPasswordField> {
     // Visibility toggle icon
     final Widget suffixIcon = IconButton(
       icon: Icon(
-        _obscureText ? Icons.visibility_off : Icons.visibility,
+        // _obscureText ? Icons.visibility_off : Icons.visibility,
+        _obscureText
+            ? FluentIcons.eye_off_20_regular
+            : FluentIcons.eye_20_regular,
         size: webbTheme.iconTheme.mediumSize,
         color: widget.disabled
             ? webbTheme.interactionStates.disabledColor
