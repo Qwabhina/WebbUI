@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'date_time_picker_definitions.dart';
@@ -86,63 +87,62 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
   IconData _getIcon() {
     switch (widget.mode) {
       case DateTimePickerMode.time:
-        return Icons.access_time_outlined;
+        // return Icons.access_time_outlined;
+        return FluentIcons.clock_20_regular;
       case DateTimePickerMode.date:
       case DateTimePickerMode.dateTime:
       default:
-        return Icons.calendar_month_outlined;
+        // return Icons.calendar_month_outlined;
+        return FluentIcons.calendar_month_20_regular;
     }
   }
 
   Color _getBorderColor(BuildContext context) {
-    final webbTheme = context;
-
+    
     if (widget.disabled) {
-      return webbTheme.interactionStates.disabledColor;
+      return context.interactionStates.disabledColor;
     }
 
     if (widget.validationState == DateTimeValidationState.error) {
-      return webbTheme.colorPalette.error;
+      return context.colorPalette.error;
     }
 
     if (widget.validationState == DateTimeValidationState.success) {
-      return webbTheme.colorPalette.success;
+      return context.colorPalette.success;
     }
 
-    return webbTheme.colorPalette.neutralDark.withOpacity(0.3);
+    return context.colorPalette.neutralDark.withOpacity(0.3);
   }
 
   Widget? _buildSuffixIcon(BuildContext context) {
-    final webbTheme = context;
-
     if (widget.disabled) {
       return Icon(
         _getIcon(),
-        color: webbTheme.interactionStates.disabledColor,
-        size: webbTheme.iconTheme.mediumSize,
+        color: context.interactionStates.disabledColor,
+        size: context.iconTheme.mediumSize,
       );
     }
 
     if (widget.validationState == DateTimeValidationState.error) {
       return Icon(
         Icons.error_outline,
-        color: webbTheme.colorPalette.error,
-        size: webbTheme.iconTheme.mediumSize,
+        color: context.colorPalette.error,
+        size: context.iconTheme.mediumSize,
       );
     }
 
     if (widget.validationState == DateTimeValidationState.success) {
       return Icon(
         Icons.check_circle,
-        color: webbTheme.colorPalette.success,
-        size: webbTheme.iconTheme.mediumSize,
+        color: context.colorPalette.success,
+        size: context.iconTheme.mediumSize,
       );
     }
 
     return Icon(
       _getIcon(),
-      color: webbTheme.colorPalette.primary,
-      size: webbTheme.iconTheme.mediumSize,
+      color: context.colorPalette.primary,
+      size: context.iconTheme.mediumSize,
     );
   }
 
@@ -251,32 +251,30 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
   }
 
   void _showTimeConstraintError() {
-    final webbTheme = context;
     _scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(
           'Selected time is outside allowed range',
-          style: webbTheme.typography.bodyMedium.copyWith(
-            color: webbTheme.colorPalette.onSurface,
+          style: context.typography.bodyMedium.copyWith(
+            color: context.colorPalette.onSurface,
           ),
         ),
-        backgroundColor: webbTheme.colorPalette.error,
+        backgroundColor: context.colorPalette.error,
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
   void _showDateConstraintError() {
-    final webbTheme = context;
     _scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(
           'Selected date is outside allowed range',
-          style: webbTheme.typography.bodyMedium.copyWith(
-            color: webbTheme.colorPalette.onSurface,
+          style: context.typography.bodyMedium.copyWith(
+            color: context.colorPalette.onSurface,
           ),
         ),
-        backgroundColor: webbTheme.colorPalette.error,
+        backgroundColor: context.colorPalette.error,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -284,7 +282,6 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
 
   @override
   Widget build(BuildContext context) {
-    final webbTheme = context;
     final borderColor = _getBorderColor(context);
     final suffixIcon = _buildSuffixIcon(context);
 
@@ -303,25 +300,25 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
           if (widget.label != null)
             Padding(
               padding:
-                  EdgeInsets.only(bottom: webbTheme.spacingGrid.spacing(1)),
+                  EdgeInsets.only(bottom: context.spacingGrid.spacing(1)),
               child: Row(
                 children: [
                   Text(
                     widget.label!,
-                    style: webbTheme.typography.labelMedium.copyWith(
+                    style: context.typography.labelMedium.copyWith(
                       color: widget.disabled
-                          ? webbTheme.interactionStates.disabledColor
-                          : webbTheme.colorPalette.neutralDark,
+                          ? context.interactionStates.disabledColor
+                          : context.colorPalette.neutralDark,
                     ),
                   ),
                   if (widget.required)
                     Padding(
                       padding: EdgeInsets.only(
-                          left: webbTheme.spacingGrid.spacing(0.5)),
+                          left: context.spacingGrid.spacing(0.5)),
                       child: Text(
                         '*',
-                        style: webbTheme.typography.labelMedium.copyWith(
-                          color: webbTheme.colorPalette.error,
+                        style: context.typography.labelMedium.copyWith(
+                          color: context.colorPalette.error,
                         ),
                       ),
                     ),
@@ -333,18 +330,18 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
           InkWell(
             onTap: _showPicker,
             borderRadius:
-                BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
+                BorderRadius.circular(context.spacingGrid.baseSpacing),
             child: Container(
               padding: EdgeInsets.symmetric(
-                horizontal: webbTheme.spacingGrid.spacing(2),
-                vertical: webbTheme.spacingGrid.spacing(1.5),
+                horizontal: context.spacingGrid.spacing(2),
+                vertical: context.spacingGrid.spacing(1.5),
               ),
               decoration: BoxDecoration(
                 color: widget.disabled
-                    ? webbTheme.colorPalette.neutralDark.withOpacity(0.05)
-                    : webbTheme.colorPalette.surface,
+                    ? context.colorPalette.neutralDark.withOpacity(0.05)
+                    : context.colorPalette.surface,
                 borderRadius:
-                    BorderRadius.circular(webbTheme.spacingGrid.baseSpacing),
+                    BorderRadius.circular(context.spacingGrid.baseSpacing),
                 border: Border.all(color: borderColor, width: 1.5),
               ),
               child: Row(
@@ -353,11 +350,11 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
                   Expanded(
                     child: Text(
                       _getFormattedValue(),
-                      style: webbTheme.typography.bodyMedium.copyWith(
+                      style: context.typography.bodyMedium.copyWith(
                         color: _selectedDateTime == null || widget.disabled
-                            ? webbTheme.colorPalette.neutralDark
+                            ? context.colorPalette.neutralDark
                                 .withOpacity(0.5)
-                            : webbTheme.colorPalette.neutralDark,
+                            : context.colorPalette.neutralDark,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -365,7 +362,7 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
                   if (suffixIcon != null)
                     Padding(
                       padding: EdgeInsets.only(
-                          left: webbTheme.spacingGrid.spacing(1)),
+                          left: context.spacingGrid.spacing(1)),
                       child: suffixIcon,
                     ),
                 ],
@@ -376,13 +373,13 @@ class _WebbUIDateTimePickerState extends State<WebbUIDateTimePicker> {
           // Helper Text & Error Text
           if (widget.helperText != null || widget.errorText != null)
             Padding(
-              padding: EdgeInsets.only(top: webbTheme.spacingGrid.spacing(0.5)),
+              padding: EdgeInsets.only(top: context.spacingGrid.spacing(0.5)),
               child: Text(
                 widget.errorText ?? widget.helperText!,
-                style: webbTheme.typography.labelMedium.copyWith(
+                style: context.typography.labelMedium.copyWith(
                   color: widget.errorText != null
-                      ? webbTheme.colorPalette.error
-                      : webbTheme.colorPalette.neutralDark.withOpacity(0.6),
+                      ? context.colorPalette.error
+                      : context.colorPalette.neutralDark.withOpacity(0.6),
                 ),
               ),
             ),
