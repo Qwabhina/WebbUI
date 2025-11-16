@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webb_ui/src/buttons_controls/buttons_controls.dart';
@@ -194,7 +195,8 @@ class _WebbUINumberStepperState extends State<WebbUINumberStepper> {
               // Decrement Button
               _buildButton(
                 webbTheme,
-                icon: Icons.remove,
+                // icon: Icons.remove,
+                icon: FluentIcons.subtract_20_regular,
                 onPressed: canDecrement ? _decrement : null,
                 isEnabled: canDecrement,
               ),
@@ -209,7 +211,8 @@ class _WebbUINumberStepperState extends State<WebbUINumberStepper> {
               // Increment Button
               _buildButton(
                 webbTheme,
-                icon: Icons.add,
+                // icon: Icons.add,
+                icon: FluentIcons.add_20_regular,
                 onPressed: canIncrement ? _increment : null,
                 isEnabled: canIncrement,
               ),

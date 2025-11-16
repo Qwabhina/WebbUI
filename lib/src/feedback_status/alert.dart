@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 
@@ -34,19 +35,22 @@ class WebbUIAlert extends StatelessWidget {
   IconData _getIcon(WebbUIAlertType type) {
     switch (type) {
       case WebbUIAlertType.success:
-        return Icons.check_circle_outline;
+        // return Icons.check_circle_outline;
+        return FluentIcons.checkmark_circle_20_regular;
       case WebbUIAlertType.warning:
-        return Icons.warning_amber_rounded;
+        // return Icons.warning_amber_rounded;
+        return FluentIcons.warning_20_regular;
       case WebbUIAlertType.error:
-        return Icons.error_outline;
+        // return Icons.error_outline;
+        return FluentIcons.error_circle_20_regular;
       case WebbUIAlertType.info:
-        return Icons.info_outline;
+        // return Icons.info_outline;
+        return FluentIcons.info_20_regular;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final webbTheme = context;
     final Color backgroundColor;
     final IconData icon = _getIcon(type);
 
@@ -55,16 +59,16 @@ class WebbUIAlert extends StatelessWidget {
 
     switch (type) {
       case WebbUIAlertType.success:
-        backgroundColor = webbTheme.colorPalette.success;
+        backgroundColor = context.colorPalette.success;
         break;
       case WebbUIAlertType.warning:
-        backgroundColor = webbTheme.colorPalette.warning;
+        backgroundColor = context.colorPalette.warning;
         break;
       case WebbUIAlertType.error:
-        backgroundColor = webbTheme.colorPalette.error;
+        backgroundColor = context.colorPalette.error;
         break;
       case WebbUIAlertType.info:
-        backgroundColor = webbTheme.colorPalette.info;
+        backgroundColor = context.colorPalette.info;
         break;
     }
     
@@ -73,17 +77,17 @@ class WebbUIAlert extends StatelessWidget {
       color: backgroundColor,
       // Apply elevation from theme
       elevation:
-          elevated ? webbTheme.elevation.getShadows(1).first.blurRadius / 2 : 0,
+          elevated ? context.elevation.getShadows(1).first.blurRadius / 2 : 0,
       shadowColor: elevated
-          ? webbTheme.elevation.getShadows(1).first.color
+          ? context.elevation.getShadows(1).first.color
           : Colors.transparent,
       borderRadius: BorderRadius.circular(
-          webbTheme.spacingGrid.baseSpacing), // Rounded corners
+          context.spacingGrid.baseSpacing), // Rounded corners
 
       child: Container(
         constraints: const BoxConstraints(
             minHeight: 48), // Ensure minimum height for touch target/visibility
-        padding: EdgeInsets.all(webbTheme.spacingGrid.spacing(2)),
+        padding: EdgeInsets.all(context.spacingGrid.spacing(2)),
         
         child: Row(
           crossAxisAlignment:
@@ -92,22 +96,22 @@ class WebbUIAlert extends StatelessWidget {
             // Icon
             Padding(
               padding:
-                  EdgeInsets.only(top: webbTheme.spacingGrid.spacing(0.25)),
+                  EdgeInsets.only(top: context.spacingGrid.spacing(0.25)),
               child: Icon(
                 icon,
                 color: foregroundColor,
-                size: webbTheme.iconTheme.mediumSize,
+                size: context.iconTheme.mediumSize,
               ),
             ),
 
-            SizedBox(width: webbTheme.spacingGrid.spacing(2)),
+            SizedBox(width: context.spacingGrid.spacing(2)),
             
             // Message Text (Expanded to fill space)
             Expanded(
               child: Text(
                 message,
                 // Using bodyLarge for better readability
-                style: webbTheme.typography.bodyLarge
+                style: context.typography.bodyLarge
                     .copyWith(color: foregroundColor),
               ),
             ),
@@ -116,22 +120,23 @@ class WebbUIAlert extends StatelessWidget {
             if (dismissible)
               Padding(
                 padding:
-                    EdgeInsets.only(left: webbTheme.spacingGrid.spacing(1)),
+                    EdgeInsets.only(left: context.spacingGrid.spacing(1)),
                 child: IconButton(
                   icon: Icon(
-                    Icons.close,
+                    // Icons.close,
+                    FluentIcons.dismiss_20_regular,
                     color: foregroundColor,
-                    size: webbTheme.iconTheme.mediumSize *
+                    size: context.iconTheme.mediumSize *
                         0.9, // Slightly smaller close icon
                   ),
                   onPressed: onDismiss,
                   // Ensure proper touch target size using accessibility theme
                   constraints: BoxConstraints(
-                    minWidth: webbTheme.accessibility.minTouchTargetSize,
-                    minHeight: webbTheme.accessibility.minTouchTargetSize,
+                    minWidth: context.accessibility.minTouchTargetSize,
+                    minHeight: context.accessibility.minTouchTargetSize,
                   ),
                   padding: EdgeInsets.zero,
-                  splashRadius: webbTheme.spacingGrid.spacing(3),
+                  splashRadius: context.spacingGrid.spacing(3),
                 ),
               ),
           ],

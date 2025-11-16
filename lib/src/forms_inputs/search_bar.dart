@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:webb_ui/src/theme.dart';
 import 'text_input/input_decoration.dart';
@@ -102,7 +103,8 @@ class _WebbUISearchBarState extends State<WebbUISearchBar> {
     final webbTheme = context;
     return IconButton(
       icon: Icon(
-        Icons.clear,
+        // Icons.clear,
+        FluentIcons.dismiss_20_regular,
         color: webbTheme.colorPalette.neutralDark.withOpacity(0.6),
         size: webbTheme.iconTheme.smallSize,
       ),
@@ -121,7 +123,8 @@ class _WebbUISearchBarState extends State<WebbUISearchBar> {
       context: context,
       hintText: widget.hintText,
       prefixIcon: Icon(
-        Icons.search,
+        // Icons.search,
+        FluentIcons.search_20_regular,
         color: webbTheme.colorPalette.neutralDark.withOpacity(0.6),
         size: webbTheme.iconTheme.mediumSize,
       ),
